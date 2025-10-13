@@ -1,7 +1,6 @@
 // Requires: Sheets01/globals.js to be loaded before this file. esp in Google Apps Script
 
 // omit the following import statements in Google Apps Script
-
 import {
     RIDER_CACHE_FROM_REMOTE_SOURCE,
     RIDER_CACHE_LOCAL,
@@ -22,8 +21,15 @@ import {
 
 
 /**
- * Loads all riders from OneDrive and updates the global cache.
- * Intended to be triggered by a user clicking a button in Google Sheets.
+ * Loads all riders from OneDrive and updates the global caches.
+ *
+ * This function is intended to be called when a user clicks a custom button in Google Sheets.
+ * 
+ * To set this up in Google Sheets:
+ * 1. Insert a drawing or image (Insert > Drawing or Insert > Image).
+ * 2. Click the inserted object, then click the three-dot menu and select "Assign script".
+ * 3. Enter the function name: onOneDriveRiderRefreshClick
+ * 4. When the user clicks the button in the sheet, this function will be executed.
  */
 function onOneDriveRiderRefreshClick() {
     refreshRiderData(
@@ -35,8 +41,15 @@ function onOneDriveRiderRefreshClick() {
 }
 
 /**
- * Loads all riders from Azure Blob Storage and updates the global cache.
- * Intended to be triggered by a user clicking a button in Google Sheets.
+ * Loads all riders from OneDrive and updates the global caches.
+ *
+ * This function is intended to be called when a user clicks a custom button in Google Sheets.
+ *
+ * To set this up in Google Sheets:
+ * 1. Insert a drawing or image (Insert > Drawing or Insert > Image).
+ * 2. Click the inserted object, then click the three-dot menu and select "Assign script".
+ * 3. Enter the function name: onAzureBlobRiderRefreshClick
+ * 4. When the user clicks the button in the sheet, this function will be executed.
  */
 function onAzureBlobRiderRefreshClick() {
     refreshRiderData(

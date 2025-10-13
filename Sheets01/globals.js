@@ -18,3 +18,12 @@ const ERROR_MESSAGES = {
     STATS_MISSING: "Error: {riderStats01} missing",
     PROPERTY_MISSING: "Error: Property missing"
 };
+
+// add these ONLY for ES6 module usage (test running specifically), omit in Google Apps Script
+export {
+    RIDER_CACHE_FROM_REMOTE_SOURCE,
+    RIDER_CACHE_LOCAL,
+    RIDERS_ONEDRIVE_FILENAME,
+    RIDERS_AZURE_BLOB_URL,
+    ERROR_MESSAGES
+    };
