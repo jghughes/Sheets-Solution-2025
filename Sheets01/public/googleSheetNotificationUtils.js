@@ -1,4 +1,3 @@
-
 /**
  * Appends a log entry to the "Logs" sheet in the active spreadsheet.
  * If the sheet does not exist, it is created with headers.
@@ -7,8 +6,8 @@
  * @param {string} message - Details about the log entry.
  */
 function logToSheet(operation, status, message) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var logSheet = ss.getSheetByName("Logs");
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let logSheet = ss.getSheetByName("Logs");
     if (!logSheet) {
         logSheet = ss.insertSheet("Logs");
         logSheet.appendRow(["Timestamp", "Operation", "Status", "Message"]);
@@ -29,7 +28,7 @@ function logToSheet(operation, status, message) {
  * @param {string} [operation] - Optional operation name for logging.
  */
 function showToast(message, title, operation) {
-    var toastTitle = title || "Info";
+    const toastTitle = title || "Info";
     SpreadsheetApp.getActiveSpreadsheet().toast(message, toastTitle);
     if (operation) {
         logToSheet(operation, toastTitle, message);
@@ -50,3 +49,5 @@ function reportError(message, operation, error) {
     }
     Logger.log(`Error: ${message}${error ? ` | Details: ${error}` : ""}`);
 }
+
+export { showToast, logToSheet, reportError };

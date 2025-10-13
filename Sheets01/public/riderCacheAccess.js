@@ -1,33 +1,60 @@
-// Pure/testable version
+// omit the following import statements in Google Apps Script
+
+import { hasValidStringProps, isEmpty } from "./jsUtils.js";
+import { ERROR_MESSAGES} from "../globals.js";
+
+
+
 function getRiderNameFromCache(zwiftId, cache) {
-    if (typeof zwiftId !== "string" || zwiftId.trim() === "") return "Invalid zwiftID";
-    var key = zwiftId.trim();
-    if (!cache || typeof cache !== "object") return "Cache empty";
-    var rider = cache[key];
-    if (!rider || typeof rider !== "object") return key;
-    if (!rider.hasOwnProperty("name") || typeof rider.name !== "string" || rider.name.trim() === "") return "{name} missing";
-    return rider.name;
+    return getRiderPropertyFromCacheStrict(
+        zwiftId, "name", cache, ERROR_MESSAGES.NAME_MISSING
+    );
 }
 
 function getRiderStats01FromCache(zwiftId, cache) {
-    if (typeof zwiftId !== "string" || zwiftId.trim() === "") return "Invalid zwiftID";
-    var key = zwiftId.trim();
-    if (!cache || typeof cache !== "object") return "Cache empty";
-    var rider = cache[key];
-    if (!rider || typeof rider !== "object") return key;
-    if (!rider.hasOwnProperty("riderStats01") || typeof rider.riderStats01 !== "string" || rider.riderStats01.trim() === "") return "{riderStats01} missing";
-    return rider.riderStats01;
+    return getRiderPropertyFromCacheStrict(
+        zwiftId, "riderStats01", cache, ERROR_MESSAGES.STATS_MISSING
+    );
 }
 
+/**
+ * Retrieves a specific property from a rider object in the cache with strict validation.
+ * Returns a custom error message if the property is missing or invalid.
+ *
+ * @param {string} zwiftId - The unique identifier for the rider.
+ * @param {string} property - The property name to retrieve from the rider object.
+ * @param {Object} cache - The cache object containing rider data, keyed by zwiftId.
+ * @param {string} missingMsg - The custom error message to return if the property is missing or invalid.
+ * @returns {string|*} The value of the requested property, or an error message if not found or invalid.
+ */
+function getRiderPropertyFromCacheStrict(zwiftId, property, cache, missingMsg) {
+    if (typeof zwiftId !== "string" || zwiftId.trim() === "") return ERROR_MESSAGES.INVALID_ID;
+    const key = zwiftId.trim();
+    if (isEmpty(cache) || typeof cache !== "object") return ERROR_MESSAGES.CACHE_EMPTY;
+    const rider = cache[key];
+    if (isEmpty(rider) || typeof rider !== "object") return ERROR_MESSAGES.RIDER_MISSING;
+    if (!hasValidStringProps(rider, [property])) return missingMsg;
+    return (rider && rider[property]) ? rider[property] : missingMsg;
+}
+
+/**
+ * Retrieves a specific property from a rider object in the cache with general validation.
+ * Returns a standard error message if the property is missing or empty.
+ *
+ * @param {string} zwiftId - The unique identifier for the rider.
+ * @param {string} propertyName - The property name to retrieve from the rider object.
+ * @param {Object} cache - The cache object containing rider data, keyed by zwiftId.
+ * @returns {string|*} The value of the requested property, or a standard error message if not found or empty.
+ */
 function getRiderPropertyFromCache(zwiftId, propertyName, cache) {
-    if (typeof zwiftId !== "string" || zwiftId.trim() === "" ||
-        typeof propertyName !== "string" || propertyName.trim() === "") return "?";
-    var key = zwiftId.trim();
-    var prop = propertyName.trim();
-    if (!cache || typeof cache !== "object") return "?";
-    var rider = cache[key];
-    if (!rider || typeof rider !== "object") return "?";
-    if (!rider.hasOwnProperty(prop) || rider[prop] === undefined || rider[prop] === null) return "?";
+    if (typeof zwiftId !== "string" || zwiftId.trim() === "") return ERROR_MESSAGES.INVALID_ID;
+    if (typeof propertyName !== "string" || propertyName.trim() === "") return ERROR_MESSAGES.INVALID_PROPERTY;
+    const key = zwiftId.trim();
+    const prop = propertyName.trim();
+    if (isEmpty(cache) || typeof cache !== "object") return ERROR_MESSAGES.CACHE_EMPTY;
+    const rider = cache[key];
+    if (isEmpty(rider) || typeof rider !== "object") return ERROR_MESSAGES.RIDER_MISSING;
+    if (rider[prop] === undefined || rider[prop] === null || isEmpty(rider[prop])) return ERROR_MESSAGES.PROPERTY_MISSING;
     return rider[prop];
 }
 
@@ -36,4 +63,4 @@ export {
     getRiderNameFromCache,
     getRiderStats01FromCache,
     getRiderPropertyFromCache
-    };
+};

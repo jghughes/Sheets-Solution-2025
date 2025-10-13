@@ -1,42 +1,38 @@
 // riderUtils.js
-// Utility functions for rider-related operations - these are all pure 
-// functions that can be tested in isolation.
+// Utility functions for rider-related operations - all pure functions, testable in isolation.
 
+// omit the following import statements in Google Apps Script
+import { isEmpty, hasValidStringProps } from "./jsUtils.js";
 
 /**
- * Checks if every value in raw data is minimally valid as a dictionary
- * with each item having "zwift_id" and "name" properties.
+ * Checks if every value in raw data is a minimally valid object
+ * with "zwift_id" and "name" properties.
  * @param {Object} ridersRawData - The raw riders data dictionary.
- * @return {true|string} true if valid, otherwise a description of the first problem found.
+ * @returns {true|string} true if valid, otherwise a description of the first problem found.
  */
 function isValidRawRiderData(ridersRawData) {
-    if (
-        !ridersRawData ||
-        typeof ridersRawData !== "object"
-    ) {
+    // Validation: Ensure input is a non-null object and not an array
+    if (!ridersRawData || typeof ridersRawData !== "object" || Array.isArray(ridersRawData)) {
         return "Cache is not an object.";
     }
 
-    var keys = Object.keys(ridersRawData);
-    if (keys.length === 0) {
+    // Use isEmpty to check if the object is empty
+    if (isEmpty(ridersRawData)) {
         return "Raw rider data is empty.";
     }
 
-    for (var i = 0; i < keys.length; i++) {
-        var key = keys[i];
-        var value = ridersRawData[key];
+    const riderKeys = Object.keys(ridersRawData);
 
-        if (
-            typeof value !== "object" ||
-            value === null
-        ) {
+    for (const key of riderKeys) {
+        const rider = ridersRawData[key];
+
+        // Validation: Ensure rider is a non-null object and not an array
+        if (typeof rider !== "object" || rider === null || Array.isArray(rider)) {
             return `Value for key '${key}' is not an object.`;
         }
-        if (!value.hasOwnProperty("zwift_id")) {
-            return `Value for key '${key}' is missing property 'zwift_id'.`;
-        }
-        if (!value.hasOwnProperty("name")) {
-            return `Value for key '${key}' is missing property 'name'.`;
+        // Validation: Use hasValidStringProps to check "zwift_id" and "name"
+        if (!hasValidStringProps(rider, ["zwift_id", "name"])) {
+            return `Value for key '${key}' is missing or has invalid 'zwift_id' or 'name'.`;
         }
     }
 
@@ -44,76 +40,68 @@ function isValidRawRiderData(ridersRawData) {
 }
 
 /**
- * Make a simple concise dictionary of preprocessed data
- * that after validation with isValidCleanRiderData
- * can be stored in RIDER_CACHE_LOCAL. to allow
- * fast lookups of rider names and other properties and
- * custom stats. in a future feature, this file can be
- * abbreviated to only include the subset of zwiftIds
- * we care about to achieve faster lookups.
+ * Creates a concise dictionary of preprocessed rider data.
+ * After validation, can be stored in RIDER_CACHE_LOCAL for fast lookups.
  * Handles errors gracefully for Google Sheets usage.
  * @param {Object} ridersRawData - The raw riders data dictionary.
- * @returns {Object|null} Dictionary of rider objects, keyed by zwift_id, or null if error.
+ * @returns {Object} { success, data, skipped } or { success, error }
  */
 function makeCustomizedRiderData(ridersRawData) {
-    if (!ridersRawData || typeof ridersRawData !== "object") {
-        return { success: false, error: "Input data is not an object." };
+    // Validation: Ensure input is a non-null, non-array object
+    if (
+        !ridersRawData ||
+            typeof ridersRawData !== "object" ||
+            Array.isArray(ridersRawData)
+    ) {
+        return { success: false, error: "Input data is not a valid object." };
     }
 
-    const keys = Object.keys(ridersRawData);
-    if (keys.length === 0) {
+    // Use isEmpty to check that input object is not empty
+    if (isEmpty(ridersRawData)) {
         return { success: false, error: "Input data is empty." };
     }
 
-    const customizedRiderDictionaryObject = {};
-    const skipped = [];
+    const riderIds = Object.keys(ridersRawData);
+    const customizedRiders = {};
+    const skippedRiderIds = [];
 
-    for (let i = 0; i < keys.length; i++) {
-        const value = ridersRawData[keys[i]];
-        if (
-            typeof value !== "object" || value === null ||
-                !value.hasOwnProperty("zwift_id") ||
-                !value.hasOwnProperty("name")
-        ) {
-            skipped.push(keys[i]);
+    for (const riderId of riderIds) {
+        const rider = ridersRawData[riderId];
+
+        // Validation: Ensure rider has valid "zwift_id" and "name" string properties
+        if (!hasValidStringProps(rider, ["zwift_id", "name"])) {
+            skippedRiderIds.push(riderId);
             continue;
         }
 
-        const zwiftId = typeof value["zwift_id"] === "string" ? value["zwift_id"].trim() : "";
-        if (!zwiftId) {
-            skipped.push(keys[i]);
-            continue;
-        }
+        const zwiftId = rider.zwift_id.trim();
+        const name = rider.name.trim();
 
-        const name = (typeof value["name"] === "string" && value["name"].trim() !== "")
-            ? value["name"].trim()
-            : "{name} missing";
-
-        const cleanRiderObject = {
+        const customizedRider = {
             zwift_id: zwiftId,
             name: name
         };
 
         try {
-            cleanRiderObject.riderStats01 = makeRiderStats01(zwiftId, ridersRawData);
+            customizedRider.riderStats01 = makeRiderStats01(zwiftId, ridersRawData);
         } catch (e) {
-            cleanRiderObject.riderStats01 = "{riderStats01} error";
+            customizedRider.riderStats01 = "{riderStats01} error";
         }
 
-        customizedRiderDictionaryObject[zwiftId] = cleanRiderObject;
+        customizedRiders[zwiftId] = customizedRider;
     }
 
-    return { success: true, data: customizedRiderDictionaryObject, skipped };
+    return { success: true, data: customizedRiders, skipped: skippedRiderIds };
 }
 
 /**
- * Returns a formatted stats string for a given zwiftId from the global cache.
+ * Returns a formatted stats string for a given zwiftId from the data.
  * If the rider is not found, returns the zwiftId.
  * If any required property is missing, inserts "?" for that value.
  *
  * @param {string} zwiftId - The Zwift ID to look up.
  * @param {Object} ridersRawData - The raw riders data dictionary.
- * @return {string} The formatted stats string or the zwiftId if not found.
+ * @returns {string} The formatted stats string or the zwiftId if not found.
  */
 function makeRiderStats01(zwiftId, ridersRawData) {
     if (typeof zwiftId !== "string" || zwiftId.trim() === "") {
@@ -148,25 +136,24 @@ function makeRiderStats01(zwiftId, ridersRawData) {
 
     // pretty_zFTP_wkg: check both values are present and valid
     let prettyZFtpWkg = "?";
-    const zftp = parseFloat(zwiftracingapp_zpFTP_w);
-    const weight = parseFloat(weight_kg);
+    const zFtpWattsAsNumber = parseFloat(zwiftracingapp_zpFTP_w);
+    const weightAsNumber = parseFloat(weight_kg);
     if (
         zwiftracingapp_zpFTP_w != null &&
-            weight_kg != null &&
-            !isNaN(zftp) &&
-            !isNaN(weight) &&
-            weight !== 0
+        weight_kg != null &&
+        !isNaN(zFtpWattsAsNumber) &&
+        !isNaN(weightAsNumber) &&
+        weightAsNumber !== 0
     ) {
-        prettyZFtpWkg = (zftp / weight).toFixed(2);
+        prettyZFtpWkg = (zFtpWattsAsNumber / weightAsNumber).toFixed(2);
     }
 
     return `${zwift_cat} (${prettyZFtpWkg} - ${zwift_zrs})  ${prettyRiderName}`;
 }
 
-
-// At the end of riderUtils.js
 export {
+    hasValidStringProps,
     isValidRawRiderData,
     makeCustomizedRiderData,
     makeRiderStats01
-    };
+};

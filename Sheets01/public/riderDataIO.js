@@ -1,3 +1,52 @@
+// Requires: Sheets01/globals.js to be loaded before this file. esp in Google Apps Script
+
+// omit the following import statements in Google Apps Script
+
+import {
+    RIDER_CACHE_FROM_REMOTE_SOURCE,
+    RIDER_CACHE_LOCAL,
+    RIDERS_ONEDRIVE_FILENAME,
+    RIDERS_AZURE_BLOB_URL
+} from "../globals.js";
+
+import {
+    isValidRawRiderData,
+    makeCustomizedRiderData
+} from "./riderUtils.js";
+
+import {
+    showToast,
+    logToSheet,
+    reportError
+} from "./googleSheetNotificationUtils.js";
+
+
+/**
+ * Loads all riders from OneDrive and updates the global cache.
+ * Intended to be triggered by a user clicking a button in Google Sheets.
+ */
+function onOneDriveRiderRefreshClick() {
+    refreshRiderData(
+        fetchBlobOfRidersFromOneDrive,
+        "Rider data loaded and validated.",
+        "Rider",
+        "OneDrive"
+    );
+}
+
+/**
+ * Loads all riders from Azure Blob Storage and updates the global cache.
+ * Intended to be triggered by a user clicking a button in Google Sheets.
+ */
+function onAzureBlobRiderRefreshClick() {
+    refreshRiderData(
+        fetchBlobOfRidersFromAzureBlobStorage,
+        "Rider data loaded and validated.",
+        "Azure Blob",
+        "AzureBlob"
+    );
+}
+
 
 /**
  * Generalized function to refresh rider data from any source.
@@ -9,23 +58,23 @@
  */
 function refreshRiderData(fetchFunction, successMessage, errorPrefix, operationName) {
     try {
-        var ridersRawData = fetchFunction();
-        if (!ridersRawData) {
+        const ridersRawData = fetchFunction();
+        if (!ridersRawData || isEmpty(ridersRawData)) {
             showToast("No data returned from fetch function.", "Error", operationName);
             logToSheet(operationName, "Failure", "No data returned from fetch function.");
             return;
         }
-        var validation = isValidRawRiderData(ridersRawData);
+        const validation = isValidRawRiderData(ridersRawData);
 
         if (validation === true) {
-            var result = makeCustomizedRiderData(ridersRawData);
+            const result = makeCustomizedRiderData(ridersRawData);
             if (!result.success) {
                 reportError(result.error, operationName);
                 return;
             }
-            var preprocessedRidersData = result.data;
+            const preprocessedRidersData = result.data;
 
-            if (!preprocessedRidersData) {
+            if (!preprocessedRidersData || isEmpty(preprocessedRidersData)) {
                 reportError("Preprocessed rider data is empty.", operationName);
                 return;
             }
@@ -34,39 +83,13 @@ function refreshRiderData(fetchFunction, successMessage, errorPrefix, operationN
             showToast(successMessage, "Success", operationName);
             logToSheet(operationName, "Success", successMessage);
         } else {
-            var errorMsg = `${errorPrefix} data fetch error: ${validation}`;
+            const errorMsg = `${errorPrefix} data fetch error: ${validation}`;
             reportError(errorMsg, operationName);
         }
     } catch (e) {
-        var catchMsg = `${errorPrefix} unexpected error: ${e.message}`;
+        const catchMsg = `${errorPrefix} unexpected error: ${e.message}`;
         reportError(catchMsg, operationName, e);
     }
-}
-
-/**
- * Loads all riders from OneDrive and updates the global cache.
- * Intended to be triggered by a user action in Google Sheets.
- */
-function refreshRiderDataFromOneDrive() {
-    refreshRiderData(
-        fetchBlobOfRidersFromOneDrive,
-        "Rider data loaded and validated.",
-        "Rider",
-        "OneDrive"
-    );
-}
-
-/**
- * Loads all riders from Azure Blob Storage and updates the global cache.
- * Intended to be triggered by a user action in Google Sheets.
- */
-function refreshRiderDataFromAzureBlobStorage() {
-    refreshRiderData(
-        fetchBlobOfRidersFromAzureBlobStorage,
-        "Rider data loaded and validated from Azure Blob Storage.",
-        "Azure Blob",
-        "AzureBlob"
-    );
 }
 
 /**
@@ -75,23 +98,28 @@ function refreshRiderDataFromAzureBlobStorage() {
  * @returns {Object|null} Dictionary of rider objects, keyed by zwift_id, or null if error.
  */
 function fetchBlobOfRidersFromOneDrive() {
-    var fileName = RIDERS_ONEDRIVE_FILENAME;
+    const fileName = RIDERS_ONEDRIVE_FILENAME;
     try {
-        var files = DriveApp.getFilesByName(fileName);
+        const files = DriveApp.getFilesByName(fileName);
 
         if (!files.hasNext()) {
             showToast(`File not found: ${fileName}`, "Error", "OneDrive");
             return null;
         }
 
-        var file = files.next();
-        var content = file.getBlob().getDataAsString();
-        var ridersDict;
-
+        const file = files.next();
+        const content = file.getBlob().getDataAsString();
+        let ridersDict;
         try {
             ridersDict = JSON.parse(content);
         } catch (parseError) {
             reportError("OneDrive fetch error: Invalid JSON format.", "OneDrive");
+            return null;
+        }
+
+        // Check for empty data using isEmpty utility
+        if (isEmpty(ridersDict)) {
+            reportError("OneDrive fetch error: Data is empty.", "OneDrive");
             return null;
         }
 
@@ -108,9 +136,9 @@ function fetchBlobOfRidersFromOneDrive() {
  * @returns {Object|null} Dictionary of rider objects, keyed by zwift_id, or null if error.
  */
 function fetchBlobOfRidersFromAzureBlobStorage() {
-    var blobUrl = RIDERS_AZURE_BLOB_URL;
+    const blobUrl = RIDERS_AZURE_BLOB_URL;
     try {
-        var response = UrlFetchApp.fetch(blobUrl);
+        const response = UrlFetchApp.fetch(blobUrl);
 
         if (response.getResponseCode() !== 200) {
             showToast(
@@ -121,13 +149,18 @@ function fetchBlobOfRidersFromAzureBlobStorage() {
             return null;
         }
 
-        var content = response.getContentText();
-        var ridersDict;
-
+        const content = response.getContentText();
+        let ridersDict;
         try {
             ridersDict = JSON.parse(content);
         } catch (parseError) {
             reportError("Azure Blob fetch error: Invalid JSON format.", "AzureBlob");
+            return null;
+        }
+
+        // Check for empty data using isEmpty utility
+        if (isEmpty(ridersDict)) {
+            reportError("Azure Blob fetch error: Data is empty.", "AzureBlob");
             return null;
         }
 
@@ -137,3 +170,11 @@ function fetchBlobOfRidersFromAzureBlobStorage() {
         return null;
     }
 }
+
+export {
+    onOneDriveRiderRefreshClick,
+    onAzureBlobRiderRefreshClick,
+    refreshRiderData,
+    fetchBlobOfRidersFromOneDrive,
+    fetchBlobOfRidersFromAzureBlobStorage
+};

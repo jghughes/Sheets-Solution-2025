@@ -14,14 +14,14 @@ const mockCache = {
     }
 };
 
-describe('getRiderNameFromCache', () => {
-    it('returns the rider name if present', () => {
+describe("getRiderNameFromCache", () => {
+    it("returns the rider name if present", () => {
         expect(getRiderNameFromCache("12345", mockCache)).toBe("Alice Smith");
     });
     it('returns "{name} missing" if name is empty', () => {
         expect(getRiderNameFromCache("67890", mockCache)).toBe("{name} missing");
     });
-    it('returns zwiftId if rider not found', () => {
+    it("returns zwiftId if rider not found", () => {
         expect(getRiderNameFromCache("99999", mockCache)).toBe("99999");
     });
     it('returns "Invalid zwiftID" for invalid input', () => {
@@ -29,14 +29,14 @@ describe('getRiderNameFromCache', () => {
     });
 });
 
-describe('getRiderStats01FromCache', () => {
-    it('returns the stats string if present', () => {
+describe("getRiderStats01FromCache", () => {
+    it("returns the stats string if present", () => {
         expect(getRiderStats01FromCache("12345", mockCache)).toBe("A (3.50 - Z)  as");
     });
     it('returns "{riderStats01} missing" if stats are empty', () => {
         expect(getRiderStats01FromCache("67890", mockCache)).toBe("{riderStats01} missing");
     });
-    it('returns zwiftId if rider not found', () => {
+    it("returns zwiftId if rider not found", () => {
         expect(getRiderStats01FromCache("99999", mockCache)).toBe("99999");
     });
     it('returns "Invalid zwiftID" for invalid input', () => {
@@ -44,8 +44,8 @@ describe('getRiderStats01FromCache', () => {
     });
 });
 
-describe('getRiderPropertyFromCache', () => {
-    it('returns the property value if present', () => {
+describe("getRiderPropertyFromCache", () => {
+    it("returns the property value if present", () => {
         expect(getRiderPropertyFromCache("12345", "age", mockCache)).toBe(30);
     });
     it('returns "?" if property is missing', () => {

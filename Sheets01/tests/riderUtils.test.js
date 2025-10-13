@@ -1,4 +1,4 @@
-import { isValidRawRiderData, makeCustomizedRiderData, makeRiderStats01 } from "../public/riderUtils.js";
+import { hasValidStringProps, isValidRawRiderData, makeCustomizedRiderData, makeRiderStats01 } from "../public/riderUtils.js";
 
 describe("isValidRawRiderData", () => {
     it("returns true for valid data", () => {
