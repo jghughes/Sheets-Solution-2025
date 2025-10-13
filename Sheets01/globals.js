@@ -15,7 +15,8 @@ const ERROR_MESSAGES = {
     CACHE_EMPTY: "Error: Cache empty",
     RIDER_MISSING: "Error: Rider not found",
     NAME_MISSING: "Error: {name} missing",
-    STATS_MISSING: "Error: {riderStats01} missing",
+    STATS01_MISSING: "Error: {riderStats01} missing",
+    STATS02_MISSING: "Error: {riderStats02} missing",
     PROPERTY_MISSING: "Error: Property missing"
 };
 

@@ -13,7 +13,7 @@ function getRiderNameFromCache(zwiftId, cache) {
 
 function getRiderStats01FromCache(zwiftId, cache) {
     return getRiderPropertyFromCacheStrict(
-        zwiftId, "riderStats01", cache, ERROR_MESSAGES.STATS_MISSING
+        zwiftId, "riderStats01", cache, ERROR_MESSAGES.STATS01_MISSING
     );
 }
 

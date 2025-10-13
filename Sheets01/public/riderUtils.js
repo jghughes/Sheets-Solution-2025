@@ -3,6 +3,8 @@
 
 // omit the following import statements in Google Apps Script
 import { isEmpty, hasValidStringProps } from "./jsUtils.js";
+import { mapRiderProperties } from "./mappers.js";
+
 
 /**
  * Checks if every value in raw data is a minimally valid object
@@ -87,6 +89,11 @@ function makeCustomizedRiderData(ridersRawData) {
         } catch (e) {
             customizedRider.riderStats01 = "{riderStats01} error";
         }
+        try {
+            customizedRider.riderStats02 = makeRiderStats02(zwiftId, ridersRawData);
+        } catch (e) {
+            customizedRider.riderStats02 = "{riderStats02} error";
+        }
 
         customizedRiders[zwiftId] = customizedRider;
     }
@@ -101,7 +108,7 @@ function makeCustomizedRiderData(ridersRawData) {
  *
  * @param {string} zwiftId - The Zwift ID to look up.
  * @param {Object} ridersRawData - The raw riders data dictionary.
- * @returns {string} The formatted stats string or the zwiftId if not found.
+ * @returns {string} The formatted stats string for Zwift categories or the zwiftId if not found.
  */
 function makeRiderStats01(zwiftId, ridersRawData) {
     if (typeof zwiftId !== "string" || zwiftId.trim() === "") {
@@ -118,37 +125,67 @@ function makeRiderStats01(zwiftId, ridersRawData) {
         return key;
     }
 
-    // De-structure with defaults
-    const {
-        name = "",
-        zwift_cat = "?",
-        zwiftracingapp_zpFTP_w,
-        weight_kg,
-        zwift_zrs = "?"
-    } = rider;
+    const props = mapRiderProperties(rider);
 
-    const nameParts = name.trim().split(/\s+/);
-    const prettyRiderName =
+    const nameParts = props.name.trim().split(/\s+/);
+    const tag =
         nameParts[0]
             ? (nameParts[0][0] || "?").toLowerCase() +
             (nameParts[1] ? (nameParts[1][0] || "?").toLowerCase() : "?")
             : "??";
 
-    // pretty_zFTP_wkg: check both values are present and valid
     let prettyZFtpWkg = "?";
-    const zFtpWattsAsNumber = parseFloat(zwiftracingapp_zpFTP_w);
-    const weightAsNumber = parseFloat(weight_kg);
+    const zFtpWattsAsNumberOrNaN = parseFloat(props.zraZpFtpW);
+    const weightAsNumberOrNan = parseFloat(props.weightKg);
     if (
-        zwiftracingapp_zpFTP_w != null &&
-        weight_kg != null &&
-        !isNaN(zFtpWattsAsNumber) &&
-        !isNaN(weightAsNumber) &&
-        weightAsNumber !== 0
+        props.zraZpFtpW != null &&
+            props.weightKg != null &&
+            !isNaN(zFtpWattsAsNumberOrNaN) &&
+            !isNaN(weightAsNumberOrNan) &&
+            weightAsNumberOrNan !== 0
     ) {
-        prettyZFtpWkg = (zFtpWattsAsNumber / weightAsNumber).toFixed(2);
+        prettyZFtpWkg = (zFtpWattsAsNumberOrNaN / weightAsNumberOrNan).toFixed(2);
     }
 
-    return `${zwift_cat} (${prettyZFtpWkg} - ${zwift_zrs})  ${prettyRiderName}`;
+    return `${props.zwiftCat} (${prettyZFtpWkg} - ${props.zwiftZrs}) ${tag}`;
+}
+
+
+
+/**
+ * Returns a formatted stats string for a given zwiftId from the data.
+ * If the rider is not found, returns the zwiftId.
+ * If any required property is missing, inserts "?" for that value.
+ *
+ * @param {string} zwiftId - The Zwift ID to look up.
+ * @param {Object} ridersRawData - The raw riders data dictionary.
+ * @returns {string} The formatted stats string for ZwiftRacing App categories or the zwiftId if not found.
+ */
+function makeRiderStats02(zwiftId, ridersRawData) {
+    if (typeof zwiftId !== "string" || zwiftId.trim() === "") {
+        return "Invalid zwiftID";
+    }
+    const key = zwiftId.trim();
+
+    if (!ridersRawData || typeof ridersRawData !== "object") {
+        return "Cache empty";
+    }
+
+    const rider = ridersRawData[key];
+    if (!rider || typeof rider !== "object") {
+        return key;
+    }
+
+    const props = mapRiderProperties(rider);
+
+    const nameParts = props.name.trim().split(/\s+/);
+    const tag =
+        nameParts[0]
+            ? (nameParts[0][0] || "?").toLowerCase() +
+            (nameParts[1] ? (nameParts[1][0] || "?").toLowerCase() : "?")
+            : "??";
+
+    return `${props.zraCatNum} ${props.zraScore} ${props.zraCatName} - ${tag}`;
 }
 
 export {
