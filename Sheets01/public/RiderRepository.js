@@ -1,7 +1,3 @@
-/**
- * Repository for RiderItem objects, keyed by zwiftId (int as string).
- * Backing store is a plain object. Entries are accessible in alpha order by name.
- */
 function RepositoryOfRiders() {
     this._backingStoreDictOfRiders = {}; // Key: zwiftId (as string), Value: RiderItem
 }

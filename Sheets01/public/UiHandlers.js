@@ -1,65 +1,23 @@
-// Requires: Sheets01/globals.js to be loaded before this file. esp in Google Apps Script
+// you MUST omit the following import statements in Google Apps Script
+// and also omit the export statements at the bottom of the document
 
-// you MUST omit the following import statements in Google Apps Script especially the first one
-
-import {
-    isValidRawRiderData,
-    makeCustomizedRiderData
-} from "./riderUtils.js";
-
+import { makeRiderStats01, makeRiderStats02 } from "./Models.js"; 
+import { RepositoryOfRiders, } from "./riderRepository.js";
+import { fetchJsonFromGoogleDriveFile, fetchJsonFromPublicGoogleDriveLink, fetchJsonFromUrl } from "./DataFetcher.js";
 import {
     showToast,
     logToSheet,
     reportError
-} from "./appUtils.js";
+} from "./appScriptServices.js";
 
-import { hasValidStringProps, isEmpty } from "./jsUtils.js";
+const personalGoogleDriveRidersFilename = "everyone_in_club_ZsunItems_2025_09_22.json"; // Example filename, replace with your own
+const publicGoogleDriveRidersFileLink = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
+var azureBlobRidersFileUrl = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
 
-//-------------------------------------------------------------------//
-//--------------------Caches for rider data-------------------------//
-//-----------------------------------------------------------------//
-
-
-// Global cache object for raw rider data
-var RIDER_CACHE_FROM_REMOTE_SOURCE = null;
-
-// Global cache object for pre-processed rider data 
-var RIDER_CACHE_LOCAL = null;
+let riderRepository = new RepositoryOfRiders(); // Global repository instance
 
 //-------------------------------------------------------------------//
-//---------------------------Filenames------------------------------//
-//-----------------------------------------------------------------//
-
-
-const PERSONAL_GOOGLE_DRIVE_RIDERS_FILENAME = "everyone_in_club_ZsunItems_2025_09_22.json"; // Example filename, replace with your own
-
-//-------------------------------------------------------------------//
-//---------------------------URLS-----------------------------------//
-//-----------------------------------------------------------------//
-
-
-// Example: Public Google Drive sharing link for a JSON file (replace with your own file's link)
-const PUBLIC_GOOGLE_DRIVE_RIDERS_FILE_LINK = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
-
-var AZURE_BLOB_RIDERS_FILE_URL = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
-
-//-------------------------------------------------------------------//
-//---------------------------Error messages-------------------------//
-//-----------------------------------------------------------------//
-
-const ERROR_MESSAGES = {
-    INVALID_ID: "Error: Invalid zwiftID",
-    INVALID_PROPERTY: "Error: Invalid property name",
-    CACHE_EMPTY: "Error: Cache empty",
-    RIDER_MISSING: "Error: Rider not found",
-    NAME_MISSING: "Error: {name} missing",
-    STATS01_MISSING: "Error: {riderStats01} missing",
-    STATS02_MISSING: "Error: {riderStats02} missing",
-    PROPERTY_MISSING: "Error: Property missing"
-};
-
-//-------------------------------------------------------------------//
-//--Functions for button clicks in sheet cells to fetch rider data--//
+//--------------Code behind: button clicks in Google Sheet buttons--//
 //-----------------------------------------------------------------//
 
 /**
@@ -78,7 +36,7 @@ const ERROR_MESSAGES = {
  */
 function onPersonalGoogleDriveRefreshRidersClick() {
     refreshRiderData(
-        () => fetchJsonFromGoogleDriveFile(PERSONAL_GOOGLE_DRIVE_RIDERS_FILENAME, "PrivateGoogleDriveFetch"),
+        () => fetchJsonFromGoogleDriveFile(personalGoogleDriveRidersFilename, "PrivateGoogleDriveFetch"),
         "Rider data loaded and validated from private Google Drive.",
         "PrivateGoogleDrive"
     );
@@ -99,7 +57,7 @@ function onPersonalGoogleDriveRefreshRidersClick() {
  */
 function onPublicGoogleDriveLinkRefreshRidersClick() {
     refreshRiderData(
-        () => fetchJsonFromPublicGoogleDriveLink(PUBLIC_GOOGLE_DRIVE_RIDERS_FILE_LINK, "PublicGoogleDriveFetch"),
+        () => fetchJsonFromPublicGoogleDriveLink(publicGoogleDriveRidersFileLink, "PublicGoogleDriveFetch"),
         "Rider data loaded and validated from public Google Drive link.",
         "PublicGoogleDrive"
     );
@@ -120,7 +78,7 @@ function onPublicGoogleDriveLinkRefreshRidersClick() {
  */
 function onAzureBlobStorageRefreshRidersClick() {
     refreshRiderData(
-        () => fetchJsonFromUrl(AZURE_BLOB_RIDERS_FILE_URL, "AzureBlobFetch"),
+        () => fetchJsonFromUrl(azureBlobRidersFileUrl, "AzureBlobFetch"),
         "Rider data loaded and validated from Azure Blob Storage.",
         "AzureBlobStorage"
     );
@@ -133,35 +91,77 @@ function onAzureBlobStorageRefreshRidersClick() {
  * @param {string} successMessage - Message to show on success.
  * @param {string} operationName - Name of the operation for logging.
  */
+function refreshRiderData(fetchFunction, successMessage, operationName) {
+
+    try {
+        if (!hasInternetConnection()) {
+            throw new Error("No internet connection detected.");
+        }
+
+        // Ensure the global repository exists
+        if (!riderRepository) {
+            riderRepository = new RepositoryOfRiders();
+        }
+
+        showToast("Loading rider data..");
+        const ridersRawData = fetchFunction();
+        const loadOk = riderRepository.loadFromJson(ridersRawData);
+        if (!loadOk) {
+            throw new Error("Failed to process rider data successfully. Data received but not loaded.");
+        }
+        showToast(successMessage);
+        logToSheet(`${operationName} succeeded. Loaded ${riderRepository.count()} riders.`);
+        return true;
+    } catch (e) {
+        const catchMsg = `${operationName} unexpected error: ${e.message}`;
+        reportError(catchMsg, operationName, e);
+        return false;
+    }
+
+}
+
 //-------------------------------------------------------------------//
-//-------------Functions for use as formulae in sheet cells---------//
+//-------------------Code behind: Sheet cell formulae --------------//
 //-----------------------------------------------------------------//
 
 /**
  * Returns the name of the rider for the given Zwift ID.
  * Usage in Google Sheets: =riderGetName("1234")
  */
+// ReSharper disable once UnusedLocals
 function riderGetName(zwiftId) {
-    //...
+    if (!riderRepository) {
+        return "";
+    }
+    const rider = riderRepository.getById(zwiftId);
+    return rider && rider.name ? rider.name : "";
 }
 
 /**
  * Returns stats for the rider for the given Zwift ID.
  * Usage in Google Sheets: =riderGetStats01("1234")
  */
+// ReSharper disable once UnusedLocals
 function riderGetStats01(zwiftId) {
-    //...
+    if (!riderRepository) {
+        return "";
+    }
+    const rider = riderRepository.getById(zwiftId);
+    return rider ? makeRiderStats01(rider) : "";
 }
 
 /**
  * Returns stats for the rider for the given Zwift ID.
  * Usage in Google Sheets: =riderGetStats01("1234")
  */
+// ReSharper disable once UnusedLocals
 function riderGetStats02(zwiftId) {
-    //...
+    if (!riderRepository) {
+        return "";
+    }
+    const rider = riderRepository.getById(zwiftId);
+    return rider ? makeRiderStats02(rider) : "";
 }
-
-
 
 
 
