@@ -10,15 +10,23 @@ import {
     reportError
 } from "./appScriptServices.js";
 
+/***************************************************************
+ * Remote resource target connection strings
+ ***************************************************************/
+
 const personalGoogleDriveRidersFilename = "everyone_in_club_ZsunItems_2025_09_22.json"; // Example filename, replace with your own
 const publicGoogleDriveRidersFileLink = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
 var azureBlobRidersFileUrl = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
 
+/***************************************************************
+ * data repository instance
+ ***************************************************************/
+
 let riderRepository = new RepositoryOfRiders(); // Global repository instance
 
-//-------------------------------------------------------------------//
-//--------------Code behind: button clicks in Google Sheet buttons--//
-//-----------------------------------------------------------------//
+/***************************************************************
+ * Code behind: button clicks in Google Sheet buttons
+ ***************************************************************/
 
 /**
  * Fetches and parses rider data from a JSON file stored in the user's private Google Drive
@@ -120,9 +128,40 @@ function refreshRiderData(fetchFunction, successMessage, operationName) {
 
 }
 
-//-------------------------------------------------------------------//
-//-------------------Code behind: Sheet cell formulae --------------//
-//-----------------------------------------------------------------//
+
+/**
+ * Writes all riders from the repository to the master list sheet in Google Sheets.
+ *
+ * This function is intended to be triggered by a custom button in Google Sheets.
+ * It retrieves all riders, sorts them by name, and writes them to the sheet using `writeRidersToSheet`.
+ * If the repository is not initialized or an error occurs, it reports the error and returns false.
+ *
+ * Typical usage:
+ * 1. Insert a drawing or image in Google Sheets.
+ * 2. Assign the script name: onWriteRidersToMasterListClick
+ * 3. Clicking the button will execute this function.
+ *
+ * @returns {boolean} True if the operation succeeds, false otherwise.
+ */
+function onWriteRidersToMasterListClick() {
+    if (!riderRepository) {
+        return false;
+    }
+
+    try {
+        const riders = riderRepository.getAllSortedByName();
+        writeRidersToSheet(riders);
+        return true;
+    } catch (e) {
+        const catchMsg = `Unexpected error: ${e.message}`;
+        reportError(catchMsg, "onWriteRidersToMasterListClick", e);
+        return false;
+    }
+}
+
+/***************************************************************
+ * Code behind: Sheet cell formulae
+ ***************************************************************/
 
 /**
  * Returns the name of the rider for the given Zwift ID.
@@ -163,15 +202,3 @@ function riderGetStats02(zwiftId) {
     return rider ? makeRiderStats02(rider) : "";
 }
 
-
-
-export {
-    onPersonalGoogleDriveRefreshRidersClick,
-    onPublicGoogleDriveLinkRefreshRidersClick,
-    onAzureBlobStorageRefreshRidersClick,
-    refreshRiderData,
-    fetchJsonFromGoogleDriveFile,
-    fetchJsonFromPublicGoogleDriveLink,
-    fetchJsonFromUrl,
-    hasInternetConnection
-};
