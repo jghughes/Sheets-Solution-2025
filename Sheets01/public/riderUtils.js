@@ -2,7 +2,6 @@
 // Utility functions for rider-related operations - all pure functions, testable in isolation.
 
 // omit the following import statements in Google Apps Script
-import { isEmpty, hasValidStringProps } from "./jsUtils.js";
 import { mapRiderProperties } from "./mappers.js";
 
 
@@ -187,6 +186,37 @@ function makeRiderStats02(zwiftId, ridersRawData) {
 
     return `${props.zraCatNum} ${props.zraScore} ${props.zraCatName} - ${tag}`;
 }
+
+/**
+ * Checks if an object has all required properties, and they are non-empty strings (not arrays).
+ * @param {Object} objectToCheck - The object to check.
+ * @param {string[]} requiredProperties - Array of required property names.
+ * @returns {boolean} True if all properties exist and are valid, false otherwise.
+ */
+function hasValidStringProps(objectToCheck, requiredProperties) {
+    if (typeof objectToCheck !== "object" || objectToCheck === null || Array.isArray(objectToCheck)) {
+        return false;
+    }
+    return requiredProperties.every(propertyName =>
+        Object.prototype.hasOwnProperty.call(objectToCheck, propertyName) &&
+        typeof objectToCheck[propertyName] === "string" &&
+        !Array.isArray(objectToCheck[propertyName]) &&
+        !isEmpty(objectToCheck[propertyName])
+    );
+}
+/**
+ * Checks if a value is empty (null, undefined, empty string, or array/object with no items).
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isEmpty(value) {
+    if (value == null) return true;
+    if (typeof value === "string" && value.trim() === "") return true;
+    if (Array.isArray(value) && value.length === 0) return true;
+    if (typeof value === "object" && Object.keys(value).length === 0) return true;
+    return false;
+}
+
 
 export {
     hasValidStringProps,

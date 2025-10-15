@@ -25,7 +25,8 @@ const riderPropertyMap = {
     zsunCP: { key: "zsun_CP", default: null },
     zsunAWC: { key: "zsun_AWC", default: null },
     zwiftZrs: { key: "zwift_zrs", default: "?" },
-    zwiftCat: { key: "zwift_cat", default: "?" },
+    zwiftCatOpen: { key: "zwift_cat_open", default: "?" },
+    zwiftCatFemale: { key: "zwift_cat_female", default: "?" },
     zraScore: { key: "zwiftracingapp_score", default: "?" },
     zraCatNum: { key: "zwiftracingapp_cat_num", default: "?" },
     zraCatName: { key: "zwiftracingapp_cat_name", default: "?" },
@@ -46,10 +47,10 @@ const riderPropertyMap = {
  * @returns {Object} An object with normalized property names and defaults for missing values.
  *                   See `riderPropertyMap` for all mapped properties.
  */
-function mapRiderProperties(rawRider) {
+function mapRiderProperties(rawRiderJson) {
     const normalizedRider = {};
     for (const [normalizedProp, { key: sourceKey, default: defaultValue }] of Object.entries(riderPropertyMap)) {
-        normalizedRider[normalizedProp] = rawRider[sourceKey] ?? defaultValue;
+        normalizedRider[normalizedProp] = rawRiderJson[sourceKey] ?? defaultValue;
     }
     return normalizedRider;
 }

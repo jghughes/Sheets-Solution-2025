@@ -1,14 +1,6 @@
 // Requires: Sheets01/globals.js to be loaded before this file. esp in Google Apps Script
 
 // you MUST omit the following import statements in Google Apps Script especially the first one
-import {
-    RIDER_CACHE_FROM_REMOTE_SOURCE,
-    RIDER_CACHE_LOCAL,
-    RIDERS_GOOGLE_DRIVE_FILENAME as PERSONAL_GOOGLE_DRIVE_FILENAME,
-    PUBLIC_RIDERS_GOOGLE_DRIVE_LINK as PUBLIC_GOOGLE_DRIVE_FILELINK,
-    RIDERS_AZURE_BLOB_URL as AZURE_BLOB_URL,
-    ERROR_MESSAGES
-} from "../globals.js";
 
 import {
     isValidRawRiderData,
@@ -19,14 +11,62 @@ import {
     showToast,
     logToSheet,
     reportError
-} from "./googleSheetNotificationUtils.js";
+} from "./appUtils.js";
 
+import { hasValidStringProps, isEmpty } from "./jsUtils.js";
+
+//-------------------------------------------------------------------//
+//--------------------Caches for rider data-------------------------//
+//-----------------------------------------------------------------//
+
+
+// Global cache object for raw rider data
+var RIDER_CACHE_FROM_REMOTE_SOURCE = null;
+
+// Global cache object for pre-processed rider data 
+var RIDER_CACHE_LOCAL = null;
+
+//-------------------------------------------------------------------//
+//---------------------------Filenames------------------------------//
+//-----------------------------------------------------------------//
+
+
+const PERSONAL_GOOGLE_DRIVE_RIDERS_FILENAME = "everyone_in_club_ZsunItems_2025_09_22.json"; // Example filename, replace with your own
+
+//-------------------------------------------------------------------//
+//---------------------------URLS-----------------------------------//
+//-----------------------------------------------------------------//
+
+
+// Example: Public Google Drive sharing link for a JSON file (replace with your own file's link)
+const PUBLIC_GOOGLE_DRIVE_RIDERS_FILE_LINK = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
+
+var AZURE_BLOB_RIDERS_FILE_URL = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
+
+//-------------------------------------------------------------------//
+//---------------------------Error messages-------------------------//
+//-----------------------------------------------------------------//
+
+const ERROR_MESSAGES = {
+    INVALID_ID: "Error: Invalid zwiftID",
+    INVALID_PROPERTY: "Error: Invalid property name",
+    CACHE_EMPTY: "Error: Cache empty",
+    RIDER_MISSING: "Error: Rider not found",
+    NAME_MISSING: "Error: {name} missing",
+    STATS01_MISSING: "Error: {riderStats01} missing",
+    STATS02_MISSING: "Error: {riderStats02} missing",
+    PROPERTY_MISSING: "Error: Property missing"
+};
+
+//-------------------------------------------------------------------//
+//--Functions for button clicks in sheet cells to fetch rider data--//
+//-----------------------------------------------------------------//
 
 /**
  * Fetches and parses rider data from a JSON file stored in the user's private Google Drive
  * using the file name and DriveApp (requires script authorization and user access).
  *
- * Loads all riders from Google Drive and updates the global caches.
+ * Loads all riders from personal Google Drive and updates the global caches.
  *
  * This function is intended to be called when a user clicks a custom button in Google Sheets.
  * 
@@ -38,23 +78,49 @@ import {
  */
 function onPersonalGoogleDriveRefreshRidersClick() {
     refreshRiderData(
-        () => fetchJsonFromGoogleDriveFile(PERSONAL_GOOGLE_DRIVE_FILENAME, "PrivateGoogleDriveFetch"),
+        () => fetchJsonFromGoogleDriveFile(PERSONAL_GOOGLE_DRIVE_RIDERS_FILENAME, "PrivateGoogleDriveFetch"),
         "Rider data loaded and validated from private Google Drive.",
         "PrivateGoogleDrive"
     );
 }
 
+/**
+ * Fetches and parses rider data from a public Google Drive JSON file using its sharing link.
+ *
+ * Loads all riders from a public Google Drive link and updates the global caches.
+ *
+ * This function is intended to be called when a user clicks a custom button in Google Sheets.
+ * 
+ * To set this up in Google Sheets:
+ * 1. Insert a drawing or image (Insert > Drawing or Insert > Image).
+ * 2. Click the inserted object, then click the three-dot menu and select "Assign script".
+ * 3. Enter the function name: onPublicGoogleDriveLinkRefreshRidersClick
+ * 4. When the user clicks the button in the sheet, this function will be executed.
+ */
 function onPublicGoogleDriveLinkRefreshRidersClick() {
     refreshRiderData(
-        () => fetchJsonFromPublicGoogleDriveLink(PUBLIC_GOOGLE_DRIVE_FILELINK, "PublicGoogleDriveFetch"),
+        () => fetchJsonFromPublicGoogleDriveLink(PUBLIC_GOOGLE_DRIVE_RIDERS_FILE_LINK, "PublicGoogleDriveFetch"),
         "Rider data loaded and validated from public Google Drive link.",
         "PublicGoogleDrive"
     );
 }
 
+/**
+ * Fetches and parses rider data from a JSON file stored in Azure Blob Storage using a public URL.
+ *
+ * Loads all riders from Azure Blob Storage and updates the global caches.
+ *
+ * This function is intended to be called when a user clicks a custom button in Google Sheets.
+ * 
+ * To set this up in Google Sheets:
+ * 1. Insert a drawing or image (Insert > Drawing or Insert > Image).
+ * 2. Click the inserted object, then click the three-dot menu and select "Assign script".
+ * 3. Enter the function name: onAzureBlobStorageRefreshRidersClick
+ * 4. When the user clicks the button in the sheet, this function will be executed.
+ */
 function onAzureBlobStorageRefreshRidersClick() {
     refreshRiderData(
-        () => fetchJsonFromUrl(AZURE_BLOB_URL, "AzureBlobFetch"),
+        () => fetchJsonFromUrl(AZURE_BLOB_RIDERS_FILE_URL, "AzureBlobFetch"),
         "Rider data loaded and validated from Azure Blob Storage.",
         "AzureBlobStorage"
     );
@@ -259,7 +325,6 @@ function fetchJsonFromPublicGoogleDriveLink(publicLink, operationName = "PublicG
     }
 }
 
-
 /**
  * Fetches and parses JSON data from any public URL.
  * Handles errors gracefully for Google Sheets usage, including JSON parse errors.
@@ -323,6 +388,91 @@ function hasInternetConnection() {
     } catch (e) {
         return false;
     }
+}
+
+//-------------------------------------------------------------------//
+//-------------Functions for use as formulae in sheet cells---------//
+//-----------------------------------------------------------------//
+
+/**
+ * Returns the name of the rider for the given Zwift ID.
+ * Usage in Google Sheets: =riderGetName("1234")
+ */
+function riderGetName(zwiftId) {
+    return getRiderNameFromCache(zwiftId, RIDER_CACHE_LOCAL);
+}
+
+/**
+ * Returns stats for the rider for the given Zwift ID.
+ * Usage in Google Sheets: =riderGetStats01("1234")
+ */
+function riderGetStats01(zwiftId) {
+    return getRiderStats01FromCache(zwiftId, RIDER_CACHE_LOCAL);
+}
+
+/**
+ * Returns a specific property for the rider.
+ * Usage in Google Sheets: =riderGetProperty("1234", "propertyName")
+ */
+function riderGetProperty(zwiftId, propertyName) {
+    return getRiderPropertyFromCache(zwiftId, propertyName, RIDER_CACHE_FROM_REMOTE_SOURCE);
+}  
+
+function getRiderNameFromCache(zwiftId, cache) {
+    return getRiderPropertyFromCacheStrict(
+        zwiftId, "name", cache, ERROR_MESSAGES.NAME_MISSING
+    );
+}
+
+function getRiderStats01FromCache(zwiftId, cache) {
+    return getRiderPropertyFromCacheStrict(
+        zwiftId, "riderStats01", cache, ERROR_MESSAGES.STATS01_MISSING
+    );
+}
+
+//-------------------------------------------------------------------//
+//-------------Functions for accessing the caches---------//
+//-----------------------------------------------------------------//
+
+/**
+ * Retrieves a specific property from a rider object in the cache with strict validation.
+ * Returns a custom error message if the property is missing or invalid.
+ *
+ * @param {string} zwiftId - The unique identifier for the rider.
+ * @param {string} property - The property name to retrieve from the rider object.
+ * @param {Object} cache - The cache object containing rider data, keyed by zwiftId.
+ * @param {string} missingMsg - The custom error message to return if the property is missing or invalid.
+ * @returns {string|*} The value of the requested property, or an error message if not found or invalid.
+ */
+function getRiderPropertyFromCacheStrict(zwiftId, property, cache, missingMsg) {
+    if (typeof zwiftId !== "string" || zwiftId.trim() === "") return ERROR_MESSAGES.INVALID_ID;
+    const key = zwiftId.trim();
+    if (isEmpty(cache) || typeof cache !== "object") return ERROR_MESSAGES.CACHE_EMPTY;
+    const rider = cache[key];
+    if (isEmpty(rider) || typeof rider !== "object") return ERROR_MESSAGES.RIDER_MISSING;
+    if (!hasValidStringProps(rider, [property])) return missingMsg;
+    return (rider && rider[property]) ? rider[property] : missingMsg;
+}
+
+/**
+ * Retrieves a specific property from a rider object in the cache with general validation.
+ * Returns a standard error message if the property is missing or empty.
+ *
+ * @param {string} zwiftId - The unique identifier for the rider.
+ * @param {string} propertyName - The property name to retrieve from the rider object.
+ * @param {Object} cache - The cache object containing rider data, keyed by zwiftId.
+ * @returns {string|*} The value of the requested property, or a standard error message if not found or empty.
+ */
+function getRiderPropertyFromCache(zwiftId, propertyName, cache) {
+    if (typeof zwiftId !== "string" || zwiftId.trim() === "") return ERROR_MESSAGES.INVALID_ID;
+    if (typeof propertyName !== "string" || propertyName.trim() === "") return ERROR_MESSAGES.INVALID_PROPERTY;
+    const key = zwiftId.trim();
+    const prop = propertyName.trim();
+    if (isEmpty(cache) || typeof cache !== "object") return ERROR_MESSAGES.CACHE_EMPTY;
+    const rider = cache[key];
+    if (isEmpty(rider) || typeof rider !== "object") return ERROR_MESSAGES.RIDER_MISSING;
+    if (rider[prop] === undefined || rider[prop] === null || isEmpty(rider[prop])) return ERROR_MESSAGES.PROPERTY_MISSING;
+    return rider[prop];
 }
 
 
