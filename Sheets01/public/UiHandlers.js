@@ -3,7 +3,12 @@
 
 import { makeRiderStats01, makeRiderStats02 } from "./Models.js"; 
 import { RepositoryOfRiders, } from "./riderRepository.js";
-import { fetchJsonFromGoogleDriveFile, fetchJsonFromPublicGoogleDriveLink, fetchJsonFromUrl } from "./DataFetcher.js";
+import {
+    fetchPlainTextFileFromMyDrive,
+    fetchPlainTextFileFromSharedLinkToGoogleDrive,
+    fetchPlainTextFileFromUrl,
+    hasInternetConnection
+} from "./DataFetcher.js";
 import {
     showToast,
     logToSheet,
@@ -14,7 +19,7 @@ import {
  * Remote resource target connection strings
  ***************************************************************/
 
-const personalGoogleDriveRidersFilename = "everyone_in_club_ZsunItems_2025_09_22.json"; // Example filename, replace with your own
+const personalGoogleDriveRidersFilename = "everyone_in_club_ZsunItems_2025_09_22_modern.json"; // Example filename, replace with your own
 const publicGoogleDriveRidersFileLink = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
 var azureBlobRidersFileUrl = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
 
@@ -25,7 +30,17 @@ var azureBlobRidersFileUrl = "https://<your-storage-account>.blob.core.windows.n
 let riderRepository = new RepositoryOfRiders(); // Global repository instance
 
 /***************************************************************
- * Code behind: button clicks in Google Sheet buttons
+ * Code behind: Auto-launch sidebar on sheet open
+ ***************************************************************/
+
+
+function onOpen() {
+    SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('Sidebar'));
+}
+
+
+/***************************************************************
+ * Code behind: button clicks handled in Sidebar.html
  ***************************************************************/
 
 /**
@@ -42,11 +57,12 @@ let riderRepository = new RepositoryOfRiders(); // Global repository instance
  * 3. Enter the function name: onOneDriveRiderRefreshClick
  * 4. When the user clicks the button in the sheet, this function will be executed.
  */
-function onPersonalGoogleDriveRefreshRidersClick() {
+function fetchFromMyDrive(filename = "everyone_in_club_ZsunItems_2025_09_22_modern.json") {
     refreshRiderData(
-        () => fetchJsonFromGoogleDriveFile(personalGoogleDriveRidersFilename, "PrivateGoogleDriveFetch"),
-        "Rider data loaded and validated from private Google Drive.",
-        "PrivateGoogleDrive"
+        () => fetchPlainTextFileFromMyDrive(filename, "MyDriveFetch"),
+        "Rider data loaded and validated from Google MyDrive.",
+        "MyDrive",
+        "MasterList"
     );
 }
 
@@ -60,14 +76,15 @@ function onPersonalGoogleDriveRefreshRidersClick() {
  * To set this up in Google Sheets:
  * 1. Insert a drawing or image (Insert > Drawing or Insert > Image).
  * 2. Click the inserted object, then click the three-dot menu and select "Assign script".
- * 3. Enter the function name: onPublicGoogleDriveLinkRefreshRidersClick
+ * 3. Enter the function name: fetchFromGoogleDriveLink
  * 4. When the user clicks the button in the sheet, this function will be executed.
  */
-function onPublicGoogleDriveLinkRefreshRidersClick() {
+function fetchFromGoogleDriveLink(link) {
     refreshRiderData(
-        () => fetchJsonFromPublicGoogleDriveLink(publicGoogleDriveRidersFileLink, "PublicGoogleDriveFetch"),
-        "Rider data loaded and validated from public Google Drive link.",
-        "PublicGoogleDrive"
+        () => fetchPlainTextFileFromSharedLinkToGoogleDrive(link, "GoogleDriveFetch"),
+        "Rider data loaded and validated from shared Google Drive.",
+        "SharedGoogleDrive",
+        "MasterList"
     );
 }
 
@@ -81,14 +98,14 @@ function onPublicGoogleDriveLinkRefreshRidersClick() {
  * To set this up in Google Sheets:
  * 1. Insert a drawing or image (Insert > Drawing or Insert > Image).
  * 2. Click the inserted object, then click the three-dot menu and select "Assign script".
- * 3. Enter the function name: onAzureBlobStorageRefreshRidersClick
+ * 3. Enter the function name: fetchFromUrl
  * 4. When the user clicks the button in the sheet, this function will be executed.
  */
-function onAzureBlobStorageRefreshRidersClick() {
+function fetchFromUrl(url) {
     refreshRiderData(
-        () => fetchJsonFromUrl(azureBlobRidersFileUrl, "AzureBlobFetch"),
-        "Rider data loaded and validated from Azure Blob Storage.",
-        "AzureBlobStorage"
+        () => fetchPlainTextFileFromUrl(url, "HttpFetch"),
+        "Rider data loaded and validated from URL.",
+        "Http address", "MasterList"
     );
 }
 
@@ -99,7 +116,7 @@ function onAzureBlobStorageRefreshRidersClick() {
  * @param {string} successMessage - Message to show on success.
  * @param {string} operationName - Name of the operation for logging.
  */
-function refreshRiderData(fetchFunction, successMessage, operationName) {
+function refreshRiderData(fetchFunction, successMessage, operationName, sheetName) {
 
     try {
         if (!hasInternetConnection()) {
@@ -113,12 +130,10 @@ function refreshRiderData(fetchFunction, successMessage, operationName) {
 
         showToast("Loading rider data..");
         const ridersRawData = fetchFunction();
-        const loadOk = riderRepository.loadFromJson(ridersRawData);
-        if (!loadOk) {
-            throw new Error("Failed to process rider data successfully. Data received but not loaded.");
-        }
+        riderRepository.loadFromJson(ridersRawData);
+        writeRidersToSheet(riderRepository.getAllSortedByName(), sheetName);
         showToast(successMessage);
-        logToSheet(`${operationName} succeeded. Loaded ${riderRepository.count()} riders.`);
+        logToSheet(`${operationName} succeeded. Loaded ${riderRepository.count()} riders into repository and ${sheetName} sheet.`);
         return true;
     } catch (e) {
         const catchMsg = `${operationName} unexpected error: ${e.message}`;

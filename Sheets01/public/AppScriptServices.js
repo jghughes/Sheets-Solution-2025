@@ -51,36 +51,38 @@ function reportError(message, operation, error) {
 }
 
 /**
- * Writes a list of rider objects to the "MasterList" sheet in the active spreadsheet.
+ * Writes an array of rider objects to a specified sheet in the active Google Spreadsheet.
  *
- * If the "MasterList" sheet does not exist, it is created and headers are added.
- * Only the following properties are included as columns:
- *   zwiftId, name, zwiftRacingAppZpFtpWatts, zwiftZrsScore, zwiftCatOpen, zwiftCatFemale,
- *   zwiftRacingAppCatNum, zwiftRacingAppScore, zwiftRacingAppCatName.
- * If the sheet already exists, it is fully cleared (including headers) before writing new data.
+ * - If the sheet named `nameOfSheet` does not exist, it is created and column headers are added.
+ * - If the sheet exists, all its contents (including headers) are cleared before writing new data.
+ * - Only specific rider properties are included as columns:
+ *   "Zwift ID", "Name", "Zwift Cat Open", "Zwift Cat Female", "Zwift ZRS Score",
+ *   "ZwiftRacing Cat Num", "ZwiftRacing Cat Name", "ZwiftRacing Velo rating", "ZwiftRacing zFTP (W)".
+ * - Each rider object is mapped to a row, with missing properties filled as empty strings.
  *
- * @param {Object[]} riders - Array of rider objects, each with the specified properties.
+ * @param {Object[]} riders - Array of rider objects to write. Each object should contain the specified properties.
+ * @param {string} nameOfSheet - The name of the sheet to write data to.
  */
-function writeRidersToSheet(riders) {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("MasterList");
-
+function writeRidersToSheet(riders, nameOfSheet) {
     // Define the headers and corresponding property names as tuples
     var columns = [
         ["Zwift ID", "zwiftId"],
         ["Name", "name"],
-        ["ZwiftRacingApp zFTP (W)", "zwiftRacingAppZpFtpWatts"],
-        ["Zwift ZRS Score", "zwiftZrsScore"],
         ["Zwift Cat Open", "zwiftCatOpen"],
         ["Zwift Cat Female", "zwiftCatFemale"],
-        ["ZwiftRacingApp Cat Num", "zwiftRacingAppCatNum"],
-        ["ZwiftRacingApp Score", "zwiftRacingAppScore"],
-        ["ZwiftRacingApp Cat Name", "zwiftRacingAppCatName"]
+        ["Zwift ZRS Score", "zwiftZrsScore"],
+        ["ZwiftRacing Cat Num", "zwiftRacingAppCatNum"],
+        ["ZwiftRacing Cat Name", "zwiftRacingAppCatName"],
+        ["ZwiftRacing Velo rating", "zwiftRacingAppVeloRating"],
+        ["ZwiftRacing zFTP (W)", "zwiftRacingAppZpFtpWatts"]
     ];
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(nameOfSheet);
 
     // Create the sheet if it doesn't exist, otherwise clear it
     if (!sheet) {
-        sheet = ss.insertSheet("MasterList");
+        sheet = ss.insertSheet(nameOfSheet);
     } else {
         sheet.clear();
     }

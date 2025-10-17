@@ -1,15 +1,19 @@
-
 /**
- * Retrieves the contents of a JSON file from the user's private Google Drive by file name.
+ * Retrieves the contents of a JSON file from the user's
+ * private Google Drive by file name.
  *
- * This function searches the user's entire Google Drive for files matching the specified name
- * using DriveApp.getFilesByName. If multiple files share the same name, only the first match is used.
- * The file's contents are read as a string and returned. The function assumes the file contains valid JSON,
+ * This function searches the user's entire Google Drive
+ * for files matching the specified name
+ * using DriveApp.getFilesByName. If multiple files share
+ * the same name, only the latest match is used.
+ * The file's contents are read as a string and returned.
+ * The function assumes the file contains valid JSON,
  * but does not parse or validate the JSON structure.
  *
  * Notes:
- * - File names in Google Drive are not unique; multiple files may have the same name.
- * - Only the first file found is used if duplicates exist.
+ * - File names in Google Drive are not unique; multiple files
+ *      may have the same name.
+ * - Only the most recent file found is used if duplicates exist.
  * - The function operates in the context of the currently authenticated user.
  * - Throws an error if no file is found.
  *
@@ -17,16 +21,25 @@
  * @returns {string} The file contents as a string.
  * @throws {Error} If the file is not found.
  */
-function fetchJsonFromGoogleDriveFile(fileName) {
+function fetchPlainTextFileFromMyDrive(fileName) {
 
-// ReSharper disable once UseOfImplicitGlobalInFunctionScope
+    let latestFile = null;
+    let latestTime = 0;
+
     const files = DriveApp.getFilesByName(fileName);
     if (!files.hasNext()) {
         throw new Error("File not found.");
     }
-    const file = files.next();
-    const content = file.getBlob().getDataAsString();
-    return content;
+    while (files.hasNext()) {
+        const file = files.next();
+        const whenUpdated = file.getLastUpdated().getTime();
+        if (whenUpdated > latestTime) {
+            latestTime = whenUpdated;
+            latestFile = file;
+        }
+    }
+    const text = latestFile.getBlob().getDataAsString();
+    return text;
 }
 
 /**
@@ -46,7 +59,7 @@ function fetchJsonFromGoogleDriveFile(fileName) {
  * @returns {string} The file content as plain text.
  * @throws {Error} If the sharing link is invalid or the file cannot be accessed.
  */
-function fetchJsonFromPublicGoogleDriveLink(publicLink) {
+function fetchPlainTextFileFromSharedLinkToGoogleDrive(publicLink) {
     // Extract file ID from the sharing link
     const match = publicLink.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (!match || !match[1]) {
@@ -57,8 +70,8 @@ function fetchJsonFromPublicGoogleDriveLink(publicLink) {
     // Construct the direct download URL
     const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
 
-    const content = fetchJsonFromUrl(downloadUrl);
-    return content;
+    const text = fetchPlainTextFileFromUrl(downloadUrl);
+    return text;
 }
 
 /**
@@ -76,15 +89,15 @@ function fetchJsonFromPublicGoogleDriveLink(publicLink) {
  * @returns {string} The response content as plain text.
  * @throws {Error} If the URL is invalid,resource is inaccessible, or returns an error status code.
  */
-function fetchJsonFromUrl(url) {
+function fetchPlainTextFileFromUrl(url) {
     // Minimal URL format validation
     if (!/^(https?:\/\/)[^\s/$.?#].[^\s]*$/.test(url)) {
         throw new Error("Invalid URL format.");
     }
 
-// ReSharper disable once UseOfImplicitGlobalInFunctionScope
-    const response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    const code = response.getResponseCode();
+    // ReSharper disable once UseOfImplicitGlobalInFunctionScope
+    const httpResponse = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const code = httpResponse.getResponseCode();
 
     if (code === 403) {
         throw new Error("Access denied: You do not have permission to access this file.");
@@ -95,10 +108,10 @@ function fetchJsonFromUrl(url) {
     if (code !== 200) {
         throw new Error(`Failed to fetch file: HTTP ${code}`);
     }
+    // presumes it's text and not a binary file
+    const text = httpResponse.getContentText();
 
-    const content = response.getContentText();
-
-    return content;
+    return text;
 }
 /**
  * Checks for internet connectivity by attempting to fetch a lightweight, reliable URL.
@@ -117,12 +130,8 @@ function hasInternetConnection() {
 }
 
 export {
-    onPersonalGoogleDriveRefreshRidersClick,
-    onPublicGoogleDriveLinkRefreshRidersClick,
-    onAzureBlobStorageRefreshRidersClick,
-    refreshRiderData,
-    fetchJsonFromGoogleDriveFile,
-    fetchJsonFromPublicGoogleDriveLink,
-    fetchJsonFromUrl,
+    fetchPlainTextFileFromMyDrive,
+    fetchPlainTextFileFromSharedLinkToGoogleDrive,
+    fetchPlainTextFileFromUrl,
     hasInternetConnection
-};
+    };

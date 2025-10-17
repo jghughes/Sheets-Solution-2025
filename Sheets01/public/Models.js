@@ -24,23 +24,23 @@ var ParseType = {
  *
  * @example
  * // Basic usage with a single key
- * parseProp(obj, "weight", ParseType.FLOAT, 0.0);
+ * parseField(obj, "weight", ParseType.FLOAT, 0.0);
  *
  * // Usage with alternative keys
- * parseProp(obj, ["weight_kg", "weight"], ParseType.FLOAT, 0.0);
+ * parseField(obj, ["weight_kg", "weight"], ParseType.FLOAT, 0.0);
  *
  * // Parsing a date from ISO 8601 string (returns Date object)
- * parseProp(obj, "created_at", ParseType.DATE, null); // e.g. "2024-06-01T12:34:56Z"
+ * parseField(obj, "created_at", ParseType.DATE, null); // e.g. "2024-06-01T12:34:56Z"
  *
  * // Parsing a date from a timestamp (milliseconds since epoch, returns Date object)
- * parseProp(obj, "created_at", ParseType.DATE, null); // e.g. 1718380800000 or "1718380800000"
+ * parseField(obj, "created_at", ParseType.DATE, null); // e.g. 1718380800000 or "1718380800000"
  *
  * // Supported date formats for ParseType.DATE:
  * // - ISO 8601 string: "2024-06-01T12:34:56Z", "2024-06-01"
  * // - Numeric timestamp (milliseconds since epoch): 1718380800000 or "1718380800000"
  * // Returns a Date object if valid, otherwise returns defaultValue or null.
  */
-function parseProp(rawJson, key, type, defaultValue) {
+function parseField(rawJson, key, type, defaultValue) {
     let valueToParse = defaultValue;
 
     // Support for alternative keys
@@ -111,33 +111,34 @@ function parseProp(rawJson, key, type, defaultValue) {
 function RiderItem(rawJson) {
     if (!rawJson) rawJson = {};
 
-    this.zwiftId = parseProp(rawJson, ["zwift_id"], ParseType.STRING, "");
-    this.name = parseProp(rawJson, ["name"], ParseType.STRING, "");
-    this.weightKg = parseProp(rawJson, ["weight_kg"], ParseType.FLOAT, 0.0);
-    this.heightCm = parseProp(rawJson, ["height_cm"], ParseType.FLOAT, 0.0);
-    this.gender = parseProp(rawJson, ["gender"], ParseType.STRING, "");
-    this.ageYears = parseProp(rawJson, ["age_years"], ParseType.INT, 0);
-    this.ageGroup = parseProp(rawJson, ["age_group"], ParseType.STRING, "");
-    this.zwiftFtpWatts = parseProp(rawJson, ["zwift_ftp"], ParseType.FLOAT, 0.0);
-    this.zwiftpowerZFtpWatts = parseProp(rawJson, ["zwiftpower_zFTP"], ParseType.FLOAT, 0.0);
-    this.zwiftRacingAppZpFtpWatts = parseProp(rawJson, ["zwiftracingapp_zpFTP_w"], ParseType.FLOAT, 0.0);
-    this.zsunOneHourWatts = parseProp(rawJson, ["zsun_one_hour_watts"], ParseType.FLOAT, 0.0);
-    this.zsunCP = parseProp(rawJson, ["zsun_CP"], ParseType.FLOAT, 0.0);
-    this.zsunAWC = parseProp(rawJson, ["zsun_AWC"], ParseType.FLOAT, 0.0);
-    this.zwiftZrsScore = parseProp(rawJson, ["zwift_zrs"], ParseType.INT, 0);
-    this.zwiftCatOpen = parseProp(rawJson, ["zwift_cat_open"], ParseType.STRING, "");
-    this.zwiftCatFemale = parseProp(rawJson, ["zwift_cat_female"], ParseType.STRING, "");
-    this.zwiftRacingAppScore = parseProp(rawJson, ["zwiftracingapp_score"], ParseType.INT, 0);
-    this.zwiftRacingAppCatNum = parseProp(rawJson, ["zwiftracingapp_cat_num"], ParseType.INT, 0);
-    this.zwiftRacingAppCatName = parseProp(rawJson, ["zwiftracingapp_cat_name"], ParseType.STRING, "");
-    this.zwiftRacingAppCP = parseProp(rawJson, ["zwiftracingapp_CP"], ParseType.FLOAT, 0.0);
-    this.zwiftRacingAppAWC = parseProp(rawJson, ["zwiftracingapp_AWC"], ParseType.FLOAT, 0.0);
-    this.zsunOneHourCurveCoefficient = parseProp(rawJson, ["zsun_one_hour_curve_coefficient"], ParseType.FLOAT, 0.0);
-    this.zsunOneHourCurveExponent = parseProp(rawJson, ["zsun_one_hour_curve_exponent"], ParseType.FLOAT, 0.0);
-    this.zsunTTTPullCurveCoefficient = parseProp(rawJson, ["zsun_TTT_pull_curve_coefficient"], ParseType.FLOAT, 0.0);
-    this.zsunTTTPullCurveExponent = parseProp(rawJson, ["zsun_TTT_pull_curve_exponent"], ParseType.FLOAT, 0.0);
-    this.zsunTTTPullCurveFitRSquared = parseProp(rawJson, ["zsun_TTT_pull_curve_fit_r_squared"], ParseType.FLOAT, 0.0);
-    this.zsunWhenCurvesFitted = parseProp(rawJson, ["zsun_when_curves_fitted"], ParseType.DATE, null);
+    this.zwiftId = parseField(rawJson, ["zwift_id"], ParseType.STRING, "");
+    this.name = parseField(rawJson, ["name"], ParseType.STRING, "");
+    this.country_alpha2 = parseField(rawJson, ["zwiftracingapp_country_alpha2"], ParseType.STRING, "");
+    this.weightKg = parseField(rawJson, ["weight_kg"], ParseType.FLOAT, 0.0);
+    this.heightCm = parseField(rawJson, ["height_cm"], ParseType.FLOAT, 0.0);
+    this.gender = parseField(rawJson, ["gender"], ParseType.STRING, "");
+    this.ageYears = parseField(rawJson, ["age_years"], ParseType.INT, 0);
+    this.ageGroup = parseField(rawJson, ["age_group"], ParseType.STRING, "");
+    this.zwiftFtpWatts = parseField(rawJson, ["zwift_ftp"], ParseType.FLOAT, 0.0);
+    this.zwiftpowerZFtpWatts = parseField(rawJson, ["zwiftpower_zFTP"], ParseType.FLOAT, 0.0);
+    this.zwiftRacingAppZpFtpWatts = parseField(rawJson, ["zwiftracingapp_zpFTP_w"], ParseType.FLOAT, 0.0);
+    this.zsunOneHourWatts = parseField(rawJson, ["zsun_one_hour_watts"], ParseType.FLOAT, 0.0);
+    this.zsunCP = parseField(rawJson, ["zsun_CP"], ParseType.FLOAT, 0.0);
+    this.zsunAWC = parseField(rawJson, ["zsun_AWC"], ParseType.FLOAT, 0.0);
+    this.zwiftZrsScore = parseField(rawJson, ["zwift_zrs"], ParseType.INT, 0);
+    this.zwiftCatOpen = parseField(rawJson, ["zwift_cat_open"], ParseType.STRING, "");
+    this.zwiftCatFemale = parseField(rawJson, ["zwift_cat_female"], ParseType.STRING, "");
+    this.zwiftRacingAppVeloRating = parseField(rawJson, ["zwiftracingapp_velo_rating_30_days"], ParseType.INT, 0);
+    this.zwiftRacingAppCatNum = parseField(rawJson, ["zwiftracingapp_cat_num_30_days"], ParseType.INT, 0);
+    this.zwiftRacingAppCatName = parseField(rawJson, ["zwiftracingapp_cat_name_30_days"], ParseType.STRING, "");
+    this.zwiftRacingAppCP = parseField(rawJson, ["zwiftracingapp_CP"], ParseType.FLOAT, 0.0);
+    this.zwiftRacingAppAWC = parseField(rawJson, ["zwiftracingapp_AWC"], ParseType.FLOAT, 0.0);
+    this.zsunOneHourCurveCoefficient = parseField(rawJson, ["zsun_one_hour_curve_coefficient"], ParseType.FLOAT, 0.0);
+    this.zsunOneHourCurveExponent = parseField(rawJson, ["zsun_one_hour_curve_exponent"], ParseType.FLOAT, 0.0);
+    this.zsunTTTPullCurveCoefficient = parseField(rawJson, ["zsun_TTT_pull_curve_coefficient"], ParseType.FLOAT, 0.0);
+    this.zsunTTTPullCurveExponent = parseField(rawJson, ["zsun_TTT_pull_curve_exponent"], ParseType.FLOAT, 0.0);
+    this.zsunTTTPullCurveFitRSquared = parseField(rawJson, ["zsun_TTT_pull_curve_fit_r_squared"], ParseType.FLOAT, 0.0);
+    this.zsunWhenCurvesFitted = parseField(rawJson, ["zsun_when_curves_fitted"], ParseType.DATE, null);
 }
 
 /**

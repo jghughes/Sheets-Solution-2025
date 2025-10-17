@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        button {
+            margin: 10px 0;
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<h3>Data Fetcher</h3>
+<button onclick="handleFetchFromDrive()">Fetch from MyDrive</button>
+<button onclick="handleFetchFromGoogleLink()">Fetch from Google Link</button>
+<button onclick="handleFetchFromURL()">Fetch from URL</button>
+
+<script>
+    function handleFetchFromDrive() {
+        const filename = prompt("Enter a filename:");
+        google.script.run.fetchFromMyDrive(filename);
+    }
+
+    function handleFetchFromGoogleLink() {
+        const link = prompt("Enter a Google Drive or Sheet link:");
+        if (link) {
+            google.script.run.fetchFromGoogleDriveLink(link);
+        }
+    }
+
+    function handleFetchFromURL() {
+        const url = prompt("Enter a URL:");
+        if (url) {
+            google.script.run.fetchFromUrl(url);
+        }
+    }
+</script>
+</body>
+</html>

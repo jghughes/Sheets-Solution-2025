@@ -3,30 +3,80 @@ function RepositoryOfRiders() {
 }
 
 /**
- * Loads riders from a JSON object.
- * @param {Object} jsonObj - Dictionary keyed by zwiftId (string), value is a record for RiderItem.
- * @returns {boolean} True if load succeeded, false otherwise.
+ * Loads riders from a JSON string and replaces the repository contents.
+ *
+ * The input must be a JSON string that parses to a non-array object whose keys
+ * are Zwift IDs (digits-only strings) and whose values are plain objects used
+ * to construct `RiderItem` instances.
+ *
+ * Side effects:
+ * - Replaces `this._backingStoreDictOfRiders` with the parsed and validated data.
+ *
+ * @param {string} jsonString - A JSON string representing a dictionary where
+ *                              each key is a Zwift ID (digits-only string)
+ *                              and each value is a record used to construct a `RiderItem`.
+ * @throws {TypeError}   If `jsonString` is not a string or is empty/whitespace.
+ * @throws {SyntaxError} If the string cannot be parsed as JSON. The original
+ *                       parser error message is appended for context.
+ * @throws {Error}       If the parsed value is not an object, if an object key
+ *                       is not a digits-only string, if a value is not a plain
+ *                       object, if `RiderItem` construction fails for any key,
+ *                       or if a constructed `RiderItem` is missing required
+ *                       properties (`zwiftId` and/or `name`).
+ *
+ * @example
+ * // Valid input:
+ * // '{"101": {"zwiftId": 101, "name": "Alice"}, "102": {"zwiftId": 102, "name": "Bob"}}'
+ * repo.loadFromJson(jsonString);
  */
-RepositoryOfRiders.prototype.loadFromJson = function (jsonObj) {
-    if (!jsonObj || typeof jsonObj !== "object" || Array.isArray(jsonObj)) {
-        return false;
+RepositoryOfRiders.prototype.loadFromJson = function (jsonString) {
+    if (typeof jsonString !== "string") {
+        throw new Error("RepositoryOfRiders.loadFromJson: input must be a JSON string.");
     }
+    if (jsonString.trim().length === 0) {
+        throw new Error("RepositoryOfRiders.loadFromJson: input string is empty or whitespace.");
+    }
+
+    let jsonObj;
+    try {
+        jsonObj = JSON.parse(jsonString);
+    } catch (parseErr) {
+        throw new Error("RepositoryOfRiders.loadFromJson: failed to parse JSON string. " + (parseErr && parseErr.message ? parseErr.message : String(parseErr)));
+    }
+
+    if (!jsonObj || typeof jsonObj !== "object" || Array.isArray(jsonObj)) {
+        throw new Error("RepositoryOfRiders.loadFromJson: parsed JSON must be a non-array object mapping zwiftId (string) to RiderItem records.");
+    }
+
     this._backingStoreDictOfRiders = {};
+
     for (let key in jsonObj) {
         if (!Object.prototype.hasOwnProperty.call(jsonObj, key)) continue;
-        // Ensure key is a string of digits (valid zwiftId)
-        if (!/^\d+$/.test(key)) continue;
-        const value = jsonObj[key];
-        if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-        const rider = new RiderItem(value);
-        // Ensure zwiftId and name are present
-        if (rider.zwiftId && rider.name) {
-            this._backingStoreDictOfRiders[key] = rider;
-        }
-    }
-    return true;
-};
 
+        // Validate key
+        if (!/^\d+$/.test(key)) {
+            throw new Error("RepositoryOfRiders.loadFromJson: encountered invalid key '" + key + "'. Expected zwiftId as digits-only string.");
+        }
+
+        const value = jsonObj[key];
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+            throw new Error("RepositoryOfRiders.loadFromJson: value for key '" + key + "' must be a non-array object representing a RiderItem.");
+        }
+
+        let rider;
+        try {
+            rider = new RiderItem(value);
+        } catch (ctorErr) {
+            throw new Error("RepositoryOfRiders.loadFromJson: failed to construct RiderItem for key '" + key + "'. " + (ctorErr && ctorErr.message ? ctorErr.message : String(ctorErr)));
+        }
+
+        if (!rider.zwiftId || !rider.name) {
+            throw new Error("RepositoryOfRiders.loadFromJson: RiderItem for key '" + key + "' is missing required properties 'zwiftId' and/or 'name'.");
+        }
+
+        this._backingStoreDictOfRiders[key] = rider;
+    }
+};
 /**
  * Removes all riders whose zwiftId is NOT in the provided array.
  * Efficient for keeping a small subset of a large collection.
@@ -104,5 +154,3 @@ RepositoryOfRiders.prototype.getById = function (zwiftId) {
 RepositoryOfRiders.prototype.count = function () {
     return Object.keys(this._backingStoreDictOfRiders).length;
 };
-
-
