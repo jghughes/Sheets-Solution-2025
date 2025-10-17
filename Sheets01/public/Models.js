@@ -1,113 +1,9 @@
-/**
- * Enum for parse types.
- * @readonly
- * @enum {string}
- */
-var ParseType = {
-    STRING: "string",
-    FLOAT: "float",
-    INT: "int",
-    BOOLEAN: "boolean",
-    DATE: "date"
-};
+// Sheets01\public\Models.js
+import { ParseType, parseField } from "./ParsingFieldsUtils.js";
 
 /**
- * Looks up a value from rawJson by key (or keys), applies the default, and parses it to the specified type.
- * Handles specific error types gracefully by returning the default value.
- * Supports extension for additional data types via the ParseType enum.
- *
- * @param {Object} rawJson - The raw input object.
- * @param {string|string[]} key - The key or array of alternative keys in the raw JSON. The first present key is used.
- * @param {ParseType} type - The type to parse to. Supported: "string", "float", "int", "date".
- * @param {*} defaultValue - The default value if the key is missing, invalid, or cannot be parsed.
- * @returns {string|number|Date|null} The parsed value, or the default value if parsing fails, or null for unknown types.
- *
- * @example
- * // Basic usage with a single key
- * parseField(obj, "weight", ParseType.FLOAT, 0.0);
- *
- * // Usage with alternative keys
- * parseField(obj, ["weight_kg", "weight"], ParseType.FLOAT, 0.0);
- *
- * // Parsing a date from ISO 8601 string (returns Date object)
- * parseField(obj, "created_at", ParseType.DATE, null); // e.g. "2024-06-01T12:34:56Z"
- *
- * // Parsing a date from a timestamp (milliseconds since epoch, returns Date object)
- * parseField(obj, "created_at", ParseType.DATE, null); // e.g. 1718380800000 or "1718380800000"
- *
- * // Supported date formats for ParseType.DATE:
- * // - ISO 8601 string: "2024-06-01T12:34:56Z", "2024-06-01"
- * // - Numeric timestamp (milliseconds since epoch): 1718380800000 or "1718380800000"
- * // Returns a Date object if valid, otherwise returns defaultValue or null.
+ * RiderItem constructor that uses parseField helpers to normalize raw JSON fields.
  */
-function parseField(rawJson, key, type, defaultValue) {
-    let valueToParse = defaultValue;
-
-    // Support for alternative keys
-    if (Array.isArray(key)) {
-        for (let k of key) {
-            if (rawJson[k] != null) {
-                valueToParse = rawJson[k];
-                break;
-            }
-        }
-    } else {
-        if (rawJson[key] != null) {
-            valueToParse = rawJson[key];
-        }
-    }
-
-    if (type === ParseType.STRING) {
-        if (typeof valueToParse !== "string") {
-            return typeof defaultValue === "string" ? defaultValue : "";
-        }
-        return valueToParse.trim() !== "" ? valueToParse : (typeof defaultValue === "string" ? defaultValue : "");
-    }
-    if (type === ParseType.FLOAT) {
-        if (typeof valueToParse === "object" || typeof valueToParse === "boolean") {
-            return typeof defaultValue === "number" ? defaultValue : 0.0;
-        }
-        let parsedNumber = parseFloat(valueToParse);
-        return !isNaN(parsedNumber) ? parsedNumber : (typeof defaultValue === "number" ? defaultValue : 0.0);
-    }
-    if (type === ParseType.INT) {
-        if (typeof valueToParse === "object" || typeof valueToParse === "boolean") {
-            return typeof defaultValue === "number" ? defaultValue : 0;
-        }
-        let parsedNumber = parseInt(valueToParse, 10);
-        return !isNaN(parsedNumber) ? parsedNumber : (typeof defaultValue === "number" ? defaultValue : 0);
-    }
-    if (type === ParseType.DATE) {
-        let dateObj = null;
-        const iso8601Regex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(?:\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
-        if (typeof valueToParse === "number") {
-            // Accept as timestamp (milliseconds since epoch)
-            dateObj = new Date(valueToParse);
-        } else if (typeof valueToParse === "string") {
-            // Numeric string: treat as timestamp in ms
-            if (/^\d{10,}$/.test(valueToParse)) {
-                dateObj = new Date(Number(valueToParse));
-            }
-            // ISO 8601 format (strict check)
-            else if (iso8601Regex.test(valueToParse)) {
-                dateObj = new Date(valueToParse);
-            } else {
-                // Invalid date format, return default
-                return defaultValue instanceof Date ? defaultValue : null;
-            }
-        } else if (valueToParse instanceof Date) {
-            dateObj = valueToParse;
-        }
-        if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
-            return dateObj;
-        }
-        // Parsing failed, return default
-        return defaultValue instanceof Date ? defaultValue : null;
-    }
-    // Unknown type, return null
-    return null;
-}
-
 function RiderItem(rawJson) {
     if (!rawJson) rawJson = {};
 
@@ -139,7 +35,53 @@ function RiderItem(rawJson) {
     this.zsunTTTPullCurveExponent = parseField(rawJson, ["zsun_TTT_pull_curve_exponent"], ParseType.FLOAT, 0.0);
     this.zsunTTTPullCurveFitRSquared = parseField(rawJson, ["zsun_TTT_pull_curve_fit_r_squared"], ParseType.FLOAT, 0.0);
     this.zsunWhenCurvesFitted = parseField(rawJson, ["zsun_when_curves_fitted"], ParseType.DATE, null);
+
+    // marker to identify instances at runtime
+    this._isRiderItem = true;
 }
+
+// Simple runtime serializer for a RiderItem — exits early if input is not a RiderItem
+export function serializeRiderItem(r) {
+    // fast check: accept real RiderItem instances (constructed with `new RiderItem(...)`)
+    // or objects explicitly marked with `_isRiderItem`
+    if (!r || (typeof r !== "object") || (!(r instanceof RiderItem) && !r._isRiderItem)) {
+        return {};
+    }
+
+    const answer = {
+        zwift_id: r.zwiftId || "",
+        name: r.name || "",
+        zwiftracingapp_country_alpha2: r.country_alpha2 || "",
+        weight_kg: typeof r.weightKg === "number" ? r.weightKg : (r.weightKg ? Number(r.weightKg) : 0),
+        height_cm: typeof r.heightCm === "number" ? r.heightCm : (r.heightCm ? Number(r.heightCm) : 0),
+        gender: r.gender || "",
+        age_years: typeof r.ageYears === "number" ? r.ageYears : (r.ageYears ? parseInt(r.ageYears, 10) || 0 : 0),
+        age_group: r.ageGroup || "",
+        zwift_ftp: typeof r.zwiftFtpWatts === "number" ? r.zwiftFtpWatts : (r.zwiftFtpWatts ? Number(r.zwiftFtpWatts) : 0),
+        zwiftpower_zFTP: typeof r.zwiftpowerZFtpWatts === "number" ? r.zwiftpowerZFtpWatts : (r.zwiftpowerZFtpWatts ? Number(r.zwiftpowerZFtpWatts) : 0),
+        zwiftracingapp_zpFTP_w: typeof r.zwiftRacingAppZpFtpWatts === "number" ? r.zwiftRacingAppZpFtpWatts : (r.zwiftRacingAppZpFtpWatts ? Number(r.zwiftRacingAppZpFtpWatts) : 0),
+        zsun_one_hour_watts: typeof r.zsunOneHourWatts === "number" ? r.zsunOneHourWatts : (r.zsunOneHourWatts ? Number(r.zsunOneHourWatts) : 0),
+        zsun_CP: typeof r.zsunCP === "number" ? r.zsunCP : (r.zsunCP ? Number(r.zsunCP) : 0),
+        zsun_AWC: typeof r.zsunAWC === "number" ? r.zsunAWC : (r.zsunAWC ? Number(r.zsunAWC) : 0),
+        zwift_zrs: typeof r.zwiftZrsScore === "number" ? r.zwiftZrsScore : (r.zwiftZrsScore ? parseInt(r.zwiftZrsScore, 10) || 0 : 0),
+        zwift_cat_open: r.zwiftCatOpen || "",
+        zwift_cat_female: r.zwiftCatFemale || "",
+        zwiftracingapp_velo_rating_30_days: typeof r.zwiftRacingAppVeloRating === "number" ? r.zwiftRacingAppVeloRating : (r.zwiftRacingAppVeloRating ? parseInt(r.zwiftRacingAppVeloRating, 10) || 0 : 0),
+        zwiftracingapp_cat_num_30_days: typeof r.zwiftRacingAppCatNum === "number" ? r.zwiftRacingAppCatNum : (r.zwiftRacingAppCatNum ? parseInt(r.zwiftRacingAppCatNum, 10) || 0 : 0),
+        zwiftracingapp_cat_name_30_days: r.zwiftRacingAppCatName || "",
+        zwiftracingapp_CP: typeof r.zwiftRacingAppCP === "number" ? r.zwiftRacingAppCP : (r.zwiftRacingAppCP ? Number(r.zwiftRacingAppCP) : 0),
+        zwiftracingapp_AWC: typeof r.zwiftRacingAppAWC === "number" ? r.zwiftRacingAppAWC : (r.zwiftRacingAppAWC ? Number(r.zwiftRacingAppAWC) : 0),
+        zsun_one_hour_curve_coefficient: typeof r.zsunOneHourCurveCoefficient === "number" ? r.zsunOneHourCurveCoefficient : (r.zsunOneHourCurveCoefficient ? Number(r.zsunOneHourCurveCoefficient) : 0),
+        zsun_one_hour_curve_exponent: typeof r.zsunOneHourCurveExponent === "number" ? r.zsunOneHourCurveExponent : (r.zsunOneHourCurveExponent ? Number(r.zsunOneHourCurveExponent) : 0),
+        zsun_TTT_pull_curve_coefficient: typeof r.zsunTTTPullCurveCoefficient === "number" ? r.zsunTTTPullCurveCoefficient : (r.zsunTTTPullCurveCoefficient ? Number(r.zsunTTTPullCurveCoefficient) : 0),
+        zsun_TTT_pull_curve_exponent: typeof r.zsunTTTPullCurveExponent === "number" ? r.zsunTTTPullCurveExponent : (r.zsunTTTPullCurveExponent ? Number(r.zsunTTTPullCurveExponent) : 0),
+        zsun_TTT_pull_curve_fit_r_squared: typeof r.zsunTTTPullCurveFitRSquared === "number" ? r.zsunTTTPullCurveFitRSquared : (r.zsunTTTPullCurveFitRSquared ? Number(r.zsunTTTPullCurveFitRSquared) : 0),
+        zsun_when_curves_fitted: r.zsunWhenCurvesFitted instanceof Date ? r.zsunWhenCurvesFitted.toISOString() : (r.zsunWhenCurvesFitted || null)
+    };
+
+    return answer;
+}
+
 
 /**
  * Returns the initials of a RiderItem's name in lower case.
@@ -158,12 +100,12 @@ function makeRiderInitials(rider) {
 }
 
 /**
-* Returns a formatted rider stats string for a given RiderItem, using Zwift cat, FTP w/kg, and ZRS score.
-* @param {RiderItem} rider - The rider object.
-* @returns {string} The formatted stats string.
-*/
+ * Returns a formatted rider stats string for a given RiderItem, using Zwift cat, FTP w/kg, and ZRS score.
+ * @param {RiderItem} rider - The rider object.
+ * @returns {string} The formatted stats string.
+ */
 function makeRiderStats01(rider) {
-// ReSharper disable once AssignedValueIsNeverUsed
+    // ReSharper disable once AssignedValueIsNeverUsed
     let prettyZwiftCat = "";
     if (rider.gender && rider.gender.toLowerCase() === "f") {
         prettyZwiftCat = `${rider.zwiftCatOpen}/${rider.zwiftCatFemale}`;
@@ -174,8 +116,8 @@ function makeRiderStats01(rider) {
     let prettyZFtpWkg = "?";
     if (
         rider.zwiftRacingAppZpFtpWatts != null &&
-            rider.weightKg != null &&
-            rider.weightKg !== 0
+        rider.weightKg != null &&
+        rider.weightKg !== 0
     ) {
         prettyZFtpWkg = (rider.zwiftRacingAppZpFtpWatts / rider.weightKg).toFixed(2);
     }
@@ -184,10 +126,92 @@ function makeRiderStats01(rider) {
 }
 
 /**
-* Returns a formatted rider stats string for a given RiderItem.
-* @param {RiderItem} rider - The rider object.
-* @returns {string} The formatted stats string.
-*/
+ * Returns a formatted rider stats string for a given RiderItem.
+ * @param {RiderItem} rider - The rider object.
+ * @returns {string} The formatted stats string.
+ */
 function makeRiderStats02(rider) {
-    return `${rider.zwiftRacingAppCatNum} (${rider.zwiftRacingAppScore} - ${rider.zwiftRacingAppCatName})`;
+    // Replaced removed `zwiftRacingAppScore` with `zwiftRacingAppVeloRating`
+    return `${rider.zwiftRacingAppCatNum} (${rider.zwiftRacingAppVeloRating} - ${rider.zwiftRacingAppCatName})`;
+}
+
+/**
+ * Writes an array of rider objects to a specified sheet in the active Google Spreadsheet.
+ *
+ * - If the sheet named `nameOfSheet` does not exist, it is created and column headers are added.
+ * - If the sheet exists, all its contents (including headers) are cleared before writing new data.
+ * - Only specific rider properties are included as columns. Headings are concise but meaningful.
+ * - Each rider object is mapped to a row, with missing properties filled as empty strings.
+ *
+ * @param {Object[]} riders - Array of rider objects to write. Each object should contain the specified properties.
+ * @param {string} nameOfSheet - The name of the sheet to write data to.
+ */
+function writeRidersToSheet(riders, nameOfSheet) {
+    // Define the headers and corresponding property names as tuples (concise headings)
+    const columns = [
+        ["Zwift ID", "zwiftId"],
+        ["Name", "name"],
+        ["Country", "country_alpha2"],
+        ["Wgt kg", "weightKg"],
+        ["Ht cm", "heightCm"],
+        ["Gender", "gender"],
+        ["Age yrs", "ageYears"],
+        ["Age grp", "ageGroup"],
+        ["zFTP W", "zwiftFtpWatts"],
+        ["zPwr zFTP", "zwiftpowerZFtpWatts"],
+        ["ZR zFTP W", "zwiftRacingAppZpFtpWatts"],
+        ["1h W", "zsunOneHourWatts"],
+        ["CP W", "zsunCP"],
+        ["AWC kJ", "zsunAWC"],
+        ["ZRS", "zwiftZrsScore"],
+        ["Zwift Cat", "zwiftCatOpen"],
+        ["Zwift Cat F", "zwiftCatFemale"],
+        ["ZR Velo", "zwiftRacingAppVeloRating"],
+        ["ZR Cat#", "zwiftRacingAppCatNum"],
+        ["ZR Cat", "zwiftRacingAppCatName"],
+        ["ZR CP W", "zwiftRacingAppCP"],
+        ["ZR AWC kJ", "zwiftRacingAppAWC"],
+        ["1h coeff", "zsunOneHourCurveCoefficient"],
+        ["1h exp", "zsunOneHourCurveExponent"],
+        ["TTT coeff", "zsunTTTPullCurveCoefficient"],
+        ["TTT exp", "zsunTTTPullCurveExponent"],
+        ["TTT R2", "zsunTTTPullCurveFitRSquared"],
+        ["Curves fitted", "zsunWhenCurvesFitted"]
+    ];
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(nameOfSheet);
+
+    // Create the sheet if it doesn't exist, otherwise clear it
+    if (!sheet) {
+        sheet = ss.insertSheet(nameOfSheet);
+    } else {
+        sheet.clear();
+    }
+    // Write headers
+    sheet.appendRow(columns.map(function (col) { return col[0]; }));
+
+    // Prepare data rows
+    const data = riders.map(function (r) {
+        return columns.map(function (col) {
+            const v = r[col[1]] !== undefined ? r[col[1]] : "";
+            // Format Date objects to ISO string for spreadsheet
+            if (v instanceof Date) return v.toISOString();
+            return v;
+        });
+    });
+
+    if (data.length > 0) {
+        sheet.getRange(2, 1, data.length, columns.length).setValues(data);
+    }
+}
+
+export {
+    ParseType,
+    parseField,
+    RiderItem,
+    makeRiderInitials,
+    makeRiderStats01,
+    makeRiderStats02,
+    writeRidersToSheet
 }

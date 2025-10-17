@@ -132,7 +132,7 @@ RepositoryOfRiders.prototype.getAllSortedByName = function () {
         }
     }
     arr.sort(function (a, b) {
-        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
     return arr;
 };

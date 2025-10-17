@@ -35,7 +35,7 @@ let riderRepository = new RepositoryOfRiders(); // Global repository instance
 
 
 function onOpen() {
-    SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile('Sidebar'));
+    SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutputFromFile("Sidebar"));
 }
 
 
