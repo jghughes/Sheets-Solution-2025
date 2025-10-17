@@ -11,7 +11,7 @@
  * @readonly
  * @enum {string}
  */
-export const ParseType = {
+const ParseType = {
     STRING: "string",
     FLOAT: "float",
     INT: "int",
@@ -28,7 +28,7 @@ export const ParseType = {
  * @param {*} defaultValue - Value to return when none of the keys exist.
  * @returns {*} The resolved value or `defaultValue`.
  */
-export function resolveValue(rawJson, key, defaultValue) {
+function resolveValue(rawJson, key, defaultValue) {
     let value = defaultValue;
     if (!rawJson || typeof rawJson !== "object") return value;
 
@@ -55,7 +55,7 @@ export function resolveValue(rawJson, key, defaultValue) {
  * @param {string} defaultValue - Default string to return when parsing fails.
  * @returns {string} Parsed string or fallback.
  */
-export function parseAsString(value, defaultValue) {
+function parseAsString(value, defaultValue) {
     if (typeof value !== "string") {
         return typeof defaultValue === "string" ? defaultValue : "";
     }
@@ -70,7 +70,7 @@ export function parseAsString(value, defaultValue) {
  * @param {number} defaultValue - Default numeric fallback.
  * @returns {number} Parsed float or fallback.
  */
-export function parseAsFloat(value, defaultValue) {
+function parseAsFloat(value, defaultValue) {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0.0;
     }
@@ -86,7 +86,7 @@ export function parseAsFloat(value, defaultValue) {
  * @param {number} defaultValue - Default integer fallback.
  * @returns {number} Parsed integer or fallback.
  */
-export function parseAsInt(value, defaultValue) {
+function parseAsInt(value, defaultValue) {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0;
     }
@@ -105,7 +105,7 @@ export function parseAsInt(value, defaultValue) {
  * @param {boolean} defaultValue - Default boolean fallback.
  * @returns {boolean} Parsed boolean or fallback.
  */
-export function parseAsBoolean(value, defaultValue) {
+function parseAsBoolean(value, defaultValue) {
     if (typeof value === "boolean") return value;
     if (typeof value === "number") return value !== 0;
     if (typeof value === "string") {
@@ -120,24 +120,41 @@ export function parseAsBoolean(value, defaultValue) {
 }
 
 /**
+ * Convert .NET ticks (100-ns intervals since 0001-01-01) to a Date.
+ * .NET ticks are the number of 100-nanosecond intervals since 0001-01-01T00:00:00.
+ * Conversion:
+ *   ms = Math.floor((ticks - 621355968000000000) / 10000)
+ *
+ * Returns null for invalid inputs.
+ *
+ * @param {number} ticks - .NET ticks value
+ * @returns {Date|null}
+ */
+function fromDotNetTicks(ticks) {
+    if (typeof ticks !== "number" || !isFinite(ticks)) return null;
+    // constant: number of .NET ticks at Unix epoch (1970-01-01T00:00:00Z)
+    const DOTNET_TICKS_AT_UNIX_EPOCH = 621355968000000000;
+    const ms = Math.floor((ticks - DOTNET_TICKS_AT_UNIX_EPOCH) / 10000);
+    return new Date(ms);
+}
+
+/**
  * Convert a numeric timestamp-like value to a Date.
  * Heuristics:
- * - |n| > 1e14 => treat as .NET ticks (100-ns since 0001-01-01) and convert:
- *     ms = (ticks - 621355968000000000) / 10000
+ * - |n| > 1e14 => treat as .NET ticks (calls `fromDotNetTicks`)
  * - |n| < 1e11 => treat as Unix seconds and convert to milliseconds
  * - otherwise treat as milliseconds
  *
  * @param {number} n - Numeric timestamp, ticks, seconds or milliseconds.
  * @returns {Date|null} Date instance or null if input invalid.
  */
-export function numericToDate(n) {
+function numericToDate(n) {
     if (typeof n !== "number" || !isFinite(n)) return null;
     const abs = Math.abs(n);
 
-    // .NET ticks -> ms
+    // .NET ticks -> ms (explicit helper)
     if (abs > 1e14) {
-        const msFromTicks = Math.floor((n - 621355968000000000) / 10000);
-        return new Date(msFromTicks);
+        return fromDotNetTicks(n);
     }
 
     // seconds -> ms
@@ -163,7 +180,7 @@ export function numericToDate(n) {
  * @param {Date|null} defaultValue - Default Date to return when parsing fails (if instance of Date) else null.
  * @returns {Date|null} Parsed Date or `defaultValue`/null.
  */
-export function parseAsDate(value, defaultValue) {
+function parseAsDate(value, defaultValue) {
     let dateObj = null;
     const iso8601Regex = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}:\d{2}|[+-]\d{4})?$/;
 
@@ -175,6 +192,7 @@ export function parseAsDate(value, defaultValue) {
         // MS JSON wrapper: /Date(<num>)/ optionally with timezone
         const msWrapperMatch = /^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/.exec(trimmed);
         if (msWrapperMatch) {
+            // explicit .NET ticks handling is supported via numericToDate -> fromDotNetTicks
             dateObj = numericToDate(Number(msWrapperMatch[1]));
         }
         // pure numeric string (seconds, ms, or ticks)
@@ -214,6 +232,91 @@ export function parseAsDate(value, defaultValue) {
 }
 
 /**
+ * Local serializer helpers that mirror ctor parsing semantics.
+ * Exported so models can reuse canonical serialization rules.
+ */
+
+/**
+ * Serialize a string-like value. Mirrors parseAsString trimming/empty fallback.
+ * @param {*} value
+ * @param {string} defaultValue
+ * @returns {string}
+ */
+function serializeString(value, defaultValue) {
+    return parseAsString(value, defaultValue);
+}
+
+/**
+ * Serialize a float-like value.
+ * - If already a number, returns it
+ * - If null/empty returns `defaultValue` (or 0)
+ * - Otherwise attempts numeric coercion via parseAsFloat
+ *
+ * @param {*} value
+ * @param {number} defaultValue
+ * @returns {number}
+ */
+function serializeFloat(value, defaultValue) {
+    if (typeof value === "number") return value;
+    if (value == null || value === "") return typeof defaultValue === "number" ? defaultValue : 0;
+    return parseAsFloat(value, typeof defaultValue === "number" ? defaultValue : 0);
+}
+
+/**
+ * Serialize an integer-like value.
+ * - If already a number, returns it
+ * - If null/empty returns `defaultValue` (or 0)
+ * - Otherwise attempts integer coercion via parseAsInt
+ *
+ * @param {*} value
+ * @param {number} defaultValue
+ * @returns {number}
+ */
+function serializeInt(value, defaultValue) {
+    if (typeof value === "number") return value;
+    if (value == null || value === "") return typeof defaultValue === "number" ? defaultValue : 0;
+    return parseAsInt(value, typeof defaultValue === "number" ? defaultValue : 0);
+}
+
+/**
+ * Serialize a date-like value into an ISO string or null.
+ * - If input is Date, returns toISOString()
+ * - If input can be parsed into Date, returns ISO
+ * - Otherwise returns existing string value or null
+ *
+ * @param {*} value
+ * @returns {string|null}
+ */
+function serializeDate(value) {
+    if (value instanceof Date) return value.toISOString();
+    var parsed = parseAsDate(value, null);
+    if (parsed instanceof Date) return parsed.toISOString();
+    return value || null;
+}
+
+/**
+ * Central serialize function delegating to type-specific helpers.
+ *
+ * Usage: serializeType(value, ParseType.FLOAT, 0)
+ *
+ * @param {*} value - Input to serialize (rider property value, possibly string/number/Date)
+ * @param {ParseType} type - Target type for serialization.
+ * @param {*} defaultValue - Default value to use when value is null/empty/invalid.
+ * @returns {string|number|null} Serialized value appropriate for JSON output.
+ */
+function serializeType(value, type, defaultValue) {
+    if (type === ParseType.STRING) return serializeString(value, defaultValue);
+    if (type === ParseType.FLOAT) return serializeFloat(value, defaultValue);
+    if (type === ParseType.INT) return serializeInt(value, defaultValue);
+    if (type === ParseType.DATE) return serializeDate(value);
+    if (type === ParseType.BOOLEAN) {
+        // boolean serialization: try parseAsBoolean so strings/numbers are handled; preserve default if invalid
+        return parseAsBoolean(value, typeof defaultValue === "boolean" ? defaultValue : false);
+    }
+    return null;
+}
+
+/**
  * Central parse function delegating to type-specific helpers.
  *
  * @param {Object} rawJson - Source object.
@@ -222,7 +325,7 @@ export function parseAsDate(value, defaultValue) {
  * @param {*} defaultValue - Default value returned when parsing fails or key missing.
  * @returns {string|number|boolean|Date|null} Parsed value or fallback.
  */
-export function parseField(rawJson, key, type, defaultValue) {
+function parseField(rawJson, key, type, defaultValue) {
     const valueToParse = resolveValue(rawJson, key, defaultValue);
 
     if (type === ParseType.STRING) return parseAsString(valueToParse, defaultValue);
@@ -234,3 +337,50 @@ export function parseField(rawJson, key, type, defaultValue) {
     // Unknown type, return null
     return null;
 }
+
+/* Expose symbols at bottom for GAS (global) compatibility.
+   - Attach to CommonJS (module.exports) when available.
+   - Otherwise attach to global object (globalThis / this) so Google Apps Script can access them.
+   - Note: removed `serializeField` backwards-compatibility alias as requested.
+*/
+(function () {
+    // Prepare export object for CommonJS environments
+    if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
+        module.exports = {
+            ParseType: ParseType,
+            resolveValue: resolveValue,
+            parseAsString: parseAsString,
+            parseAsFloat: parseAsFloat,
+            parseAsInt: parseAsInt,
+            parseAsBoolean: parseAsBoolean,
+            numericToDate: numericToDate,
+            fromDotNetTicks: fromDotNetTicks,
+            parseAsDate: parseAsDate,
+            serializeString: serializeString,
+            serializeFloat: serializeFloat,
+            serializeInt: serializeInt,
+            serializeDate: serializeDate,
+            serializeType: serializeType,
+            parseField: parseField
+        };
+        return;
+    }
+
+    // Attach to global object for GAS/browser usage
+    var __root = (typeof globalThis !== "undefined") ? globalThis : (typeof this !== "undefined" ? this : {});
+    __root.ParseType = ParseType;
+    __root.resolveValue = resolveValue;
+    __root.parseAsString = parseAsString;
+    __root.parseAsFloat = parseAsFloat;
+    __root.parseAsInt = parseAsInt;
+    __root.parseAsBoolean = parseAsBoolean;
+    __root.numericToDate = numericToDate;
+    __root.fromDotNetTicks = fromDotNetTicks;
+    __root.parseAsDate = parseAsDate;
+    __root.serializeString = serializeString;
+    __root.serializeFloat = serializeFloat;
+    __root.serializeInt = serializeInt;
+    __root.serializeDate = serializeDate;
+    __root.serializeType = serializeType;
+    __root.parseField = parseField;
+})();

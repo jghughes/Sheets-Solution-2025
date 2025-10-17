@@ -8,12 +8,12 @@ import {
     fetchPlainTextFileFromSharedLinkToGoogleDrive,
     fetchPlainTextFileFromUrl,
     hasInternetConnection
-} from "./DataFetcher.js";
+} from "../DataFetcher.js";
 import {
     showToast,
     logToSheet,
     reportError
-} from "./appScriptServices.js";
+} from "../appScriptServices.js";
 
 /***************************************************************
  * Remote resource target connection strings
