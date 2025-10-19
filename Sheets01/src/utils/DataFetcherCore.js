@@ -16,13 +16,3 @@ function isNumericString(s) {
     return typeof s === "string" && /^-?\d+$/.test(s);
 }
 
-(function () {
-    const API = { extractDriveIdFromSharedLink, isNumericString };
-    if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-        module.exports = API;
-        return;
-    }
-    var __root = (typeof globalThis !== "undefined") ? globalThis : (typeof this !== "undefined" ? this : {});
-    __root.SheetsDataFetcherCore = __root.SheetsDataFetcherCore || {};
-    Object.assign(__root.SheetsDataFetcherCore, API);
-})();

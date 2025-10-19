@@ -29,22 +29,17 @@ const ParseType = {
  * @returns {*} The resolved value or `defaultValue`.
  */
 function resolveValue(rawJson, key, defaultValue) {
-    let value = defaultValue;
-    if (!rawJson || typeof rawJson !== "object") return value;
+    if (!rawJson || typeof rawJson !== "object") return defaultValue;
 
     if (Array.isArray(key)) {
-        for (let k of key) {
-            if (rawJson[k] != null) {
-                value = rawJson[k];
-                break;
-            }
+        for (const k of key) {
+            const v = rawJson[k];
+            if (v != null) return v;
         }
-    } else {
-        if (rawJson[key] != null) {
-            value = rawJson[key];
-        }
+        return defaultValue;
     }
-    return value;
+
+    return rawJson[key] != null ? rawJson[key] : defaultValue;
 }
 
 /**
@@ -59,7 +54,8 @@ function parseAsString(value, defaultValue) {
     if (typeof value !== "string") {
         return typeof defaultValue === "string" ? defaultValue : "";
     }
-    return value.trim() !== "" ? value : (typeof defaultValue === "string" ? defaultValue : "");
+    const trimmed = value.trim();
+    return trimmed !== "" ? trimmed : (typeof defaultValue === "string" ? defaultValue : "");
 }
 
 /**
@@ -74,8 +70,11 @@ function parseAsFloat(value, defaultValue) {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0.0;
     }
-    const parsed = parseFloat(value);
-    return !isNaN(parsed) ? parsed : (typeof defaultValue === "number" ? defaultValue : 0.0);
+    if (value === "" || value == null) {
+        return typeof defaultValue === "number" ? defaultValue : 0.0;
+    }
+    const num = Number(value);
+    return Number.isFinite(num) ? num : (typeof defaultValue === "number" ? defaultValue : 0.0);
 }
 
 /**
@@ -90,8 +89,11 @@ function parseAsInt(value, defaultValue) {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0;
     }
+    if (value === "" || value == null) {
+        return typeof defaultValue === "number" ? defaultValue : 0;
+    }
     const parsed = parseInt(value, 10);
-    return !isNaN(parsed) ? parsed : (typeof defaultValue === "number" ? defaultValue : 0);
+    return Number.isFinite(parsed) ? parsed : (typeof defaultValue === "number" ? defaultValue : 0);
 }
 
 /**
@@ -125,16 +127,16 @@ function parseAsBoolean(value, defaultValue) {
  * Conversion:
  *   ms = Math.floor((ticks - 621355968000000000) / 10000)
  *
- * Returns null for invalid inputs.
+ * Accepts numeric strings as well as numbers. Returns null for invalid inputs.
  *
- * @param {number} ticks - .NET ticks value
+ * @param {number|string} ticks - .NET ticks value
  * @returns {Date|null}
  */
 function fromDotNetTicks(ticks) {
-    if (typeof ticks !== "number" || !isFinite(ticks)) return null;
-    // constant: number of .NET ticks at Unix epoch (1970-01-01T00:00:00Z)
     const DOTNET_TICKS_AT_UNIX_EPOCH = 621355968000000000;
-    const ms = Math.floor((ticks - DOTNET_TICKS_AT_UNIX_EPOCH) / 10000);
+    const num = typeof ticks === "string" ? Number(ticks) : ticks;
+    if (!Number.isFinite(num)) return null;
+    const ms = Math.floor((num - DOTNET_TICKS_AT_UNIX_EPOCH) / 10000);
     return new Date(ms);
 }
 
@@ -149,20 +151,17 @@ function fromDotNetTicks(ticks) {
  * @returns {Date|null} Date instance or null if input invalid.
  */
 function numericToDate(n) {
-    if (typeof n !== "number" || !isFinite(n)) return null;
+    if (!Number.isFinite(n)) return null;
     const abs = Math.abs(n);
 
-    // .NET ticks -> ms (explicit helper)
     if (abs > 1e14) {
         return fromDotNetTicks(n);
     }
 
-    // seconds -> ms
     if (abs < 1e11) {
         return new Date(Math.floor(n * 1000));
     }
 
-    // treat as milliseconds
     return new Date(Math.floor(n));
 }
 
@@ -184,7 +183,9 @@ function parseAsDate(value, defaultValue) {
     let dateObj = null;
     const iso8601Regex = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}:\d{2}|[+-]\d{4})?$/;
 
-    if (typeof value === "number") {
+    if (value instanceof Date) {
+        dateObj = value;
+    } else if (typeof value === "number") {
         dateObj = numericToDate(value);
     } else if (typeof value === "string") {
         const trimmed = value.trim();
@@ -192,7 +193,6 @@ function parseAsDate(value, defaultValue) {
         // MS JSON wrapper: /Date(<num>)/ optionally with timezone
         const msWrapperMatch = /^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/.exec(trimmed);
         if (msWrapperMatch) {
-            // explicit .NET ticks handling is supported via numericToDate -> fromDotNetTicks
             dateObj = numericToDate(Number(msWrapperMatch[1]));
         }
         // pure numeric string (seconds, ms, or ticks)
@@ -219,8 +219,6 @@ function parseAsDate(value, defaultValue) {
                 return defaultValue instanceof Date ? defaultValue : null;
             }
         }
-    } else if (value instanceof Date) {
-        dateObj = value;
     } else {
         return defaultValue instanceof Date ? defaultValue : null;
     }
@@ -289,7 +287,7 @@ function serializeInt(value, defaultValue) {
  */
 function serializeDate(value) {
     if (value instanceof Date) return value.toISOString();
-    var parsed = parseAsDate(value, null);
+    const parsed = parseAsDate(value, null);
     if (parsed instanceof Date) return parsed.toISOString();
     return value || null;
 }
@@ -337,50 +335,3 @@ function parseField(rawJson, key, type, defaultValue) {
     // Unknown type, return null
     return null;
 }
-
-/* Expose symbols at bottom for GAS (global) compatibility.
-   - Attach to CommonJS (module.exports) when available.
-   - Otherwise attach to global object (globalThis / this) so Google Apps Script can access them.
-   - Note: removed `serializeField` backwards-compatibility alias as requested.
-*/
-(function () {
-    // Prepare export object for CommonJS environments
-    if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
-        module.exports = {
-            ParseType: ParseType,
-            resolveValue: resolveValue,
-            parseAsString: parseAsString,
-            parseAsFloat: parseAsFloat,
-            parseAsInt: parseAsInt,
-            parseAsBoolean: parseAsBoolean,
-            numericToDate: numericToDate,
-            fromDotNetTicks: fromDotNetTicks,
-            parseAsDate: parseAsDate,
-            serializeString: serializeString,
-            serializeFloat: serializeFloat,
-            serializeInt: serializeInt,
-            serializeDate: serializeDate,
-            serializeType: serializeType,
-            parseField: parseField
-        };
-        return;
-    }
-
-    // Attach to global object for GAS/browser usage
-    var __root = (typeof globalThis !== "undefined") ? globalThis : (typeof this !== "undefined" ? this : {});
-    __root.ParseType = ParseType;
-    __root.resolveValue = resolveValue;
-    __root.parseAsString = parseAsString;
-    __root.parseAsFloat = parseAsFloat;
-    __root.parseAsInt = parseAsInt;
-    __root.parseAsBoolean = parseAsBoolean;
-    __root.numericToDate = numericToDate;
-    __root.fromDotNetTicks = fromDotNetTicks;
-    __root.parseAsDate = parseAsDate;
-    __root.serializeString = serializeString;
-    __root.serializeFloat = serializeFloat;
-    __root.serializeInt = serializeInt;
-    __root.serializeDate = serializeDate;
-    __root.serializeType = serializeType;
-    __root.parseField = parseField;
-})();
