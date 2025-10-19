@@ -1,0 +1,14 @@
+{
+  "timeZone": "America/New_York",
+  "dependencies": {},
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "addOns": {
+    "sheets": {
+      "homepageTrigger": {
+        "enabled": true,
+        "runFunction": "onOpen"
+      }
+    }
+  }
+}

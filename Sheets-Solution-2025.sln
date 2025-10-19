@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36429.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "Sheets01", "Sheets01\Sheets01.esproj", "{5B3EC744-7EF5-1FF9-1151-7DC2383264D2}"
 EndProject
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "ZsunRiderDataFetcher", "ZsunRiderDataFetcher\ZsunRiderDataFetcher.esproj", "{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,6 +19,12 @@ Global
 		{5B3EC744-7EF5-1FF9-1151-7DC2383264D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5B3EC744-7EF5-1FF9-1151-7DC2383264D2}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5B3EC744-7EF5-1FF9-1151-7DC2383264D2}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2263C0D-0054-3199-53C7-C9A8E1D1B8CB}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
