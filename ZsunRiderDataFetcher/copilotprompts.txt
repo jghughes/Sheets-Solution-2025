@@ -1,0 +1,85 @@
+Start of prompt:
+
+Context
+I am developing a Google Workspace Apps Script project to serve as an add-in for Google Sheets. My environment is Windows, using Visual Studio 2022 with Resharper and ESLint. The codebase contains both JavaScript and TypeScript files. The code must be compatible with modern Google Apps Script (GAS), support static type checking and refactoring in Visual Studio 2022, and work with npm/Clasp for deployment.
+
+Goal
+Convert the active .js document to idiomatic, maintainable, and unit-testable TypeScript in a .ts file, fully compatible with Google Apps Script for use as a Google Sheets add-in, supporting static analysis, refactoring, and deployment via npm/Clasp.
+
+TypeScript Features and Coding Requirements for Google Apps Script Compatibility
+- Use ES6 class syntax with `extends` for inheritance.
+- All methods must be defined within the class body (do not use prototype methods).
+- Do not use export statements; all code must be in the global scope.
+- Do not use arrow functions for class or object methods.
+- Do not use static or private fields.
+- Do not use modules, import/export, or ES6 module syntax.
+- Do not use async/await or Promises.
+- Do not use Map, Set, WeakMap, WeakSet, Proxy, Symbol, or newer array/object methods not supported by GAS.
+- Do not use interfaces, enums, namespaces, generics, or type-only imports/exports.
+- Do not use decorators.
+- Do not use default parameter values or parameter destructuring in function signatures.
+- Do not use nullish coalescing (??) or optional chaining (?.).
+- Do not rely on external type definitions that reference Node.js or browser APIs.
+- Target ES6 (ECMAScript 2015) in your TypeScript configuration, as supported by Google Apps Script V8 runtime.
+- Use let, const, template literals, destructuring (in assignments), simple classes, enhanced object literals, spread/rest, and for...of loops as supported by GAS.
+
+Unit Testing Readiness Requirements
+- Use dependency injection for all external library classes and services (including Google Apps Script APIs).
+- Write pure functions where possible and minimize reliance on global state.
+- Separate business logic from direct Google Apps Script API calls.
+- Define TypeScript interfaces for dependencies to facilitate mocking.
+- Avoid hard-coded values; use parameters or configuration objects.
+- Structure code as small, focused functions.
+- Where feasible, structure code to allow importing functions for testing.
+
+Conversion Steps
+
+Do not write any code until you have considered a plan for the process. Execute the plan one step at a time. Ask me before doing each next step.
+
+1. Prepare the Environment
+- Confirm the file to be converted is the active .js document.
+- Ensure the code is compatible with Google Apps Script (GAS) and does not use unsupported features.
+
+2. Remove Documentation Strings
+- Delete all docstrings (JSDoc or similar) from the file to avoid confusion during conversion.
+
+3. Update Variable Declarations and Structure
+- Replace all var declarations with let or const as appropriate.
+- Use Template Literals for String Interpolation and Multi-line Strings but avoid complex expressions inside placeholders by assigning temp variables prior.
+- Move all functions and constants to the file/global scope.
+- Remove any export statements if present.
+- Ensure classes use ES6 class syntax with extends for inheritance, and all methods are defined within the class body.
+
+4. Analyze and Annotate Function Parameters and Return Types
+- 4.1: List all function parameters whose types can be easily inferred from their name and usage.
+- 4.2: List function parameters whose types are not obvious, with a brief explanation for each. Add a docstring to each function with non-obvious parameter types, describing the parameter and its intended type.
+- 4.3: List all function return types that can be easily inferred from their usage.
+- 4.4: List functions with non-obvious return types, with a brief explanation for each. Add a docstring to each function with a non-obvious return type, describing the return value and its intended type.
+
+5. Add Type Annotations
+- Add TypeScript type hints for all function parameters and return types, using the information from Step 4.
+- Use specific types (string, number, boolean, relevant GAS types) wherever possible.
+- Use any only if a more specific type cannot be determined.
+- Do not use unknown, null, or undefined in type annotations.
+- Do not add a type annotation to the catch variable in try/catch blocks; always name it err.
+
+6. Refine Return Values
+- Ensure no function returns or assigns null or undefined.
+- Return concrete values: "" for strings, 0 for numbers, false for booleans, new Date(0) for dates.
+- Use void as the return type for functions that do not return a value.
+
+7. Remove Redundant Code
+- Remove assignments that are not used in any execution path.
+- Remove redundant type or value checks that are no longer necessary after type annotation.
+
+8. Final Review for Google Apps Script Compatibility
+- Ensure the final TypeScript code is idiomatic, maintainable, unit-testable, and fully compatible with Google Apps Script for use as a Google Sheets add-in.
+- Confirm support for static analysis, refactoring, and deployment via npm/Clasp.
+- Ensure all TypeScript code adheres to the project's tsconfig.json settings, including target ES version, module resolution, and strictness options.
+- Confirm that ESLint and Resharper rules do not conflict with tsconfig.json; resolve discrepancies in type usage, variable declarations, and code style.
+- Use only TypeScript features and syntax permitted by both Google Apps Script and the current tsconfig.json configuration.
+- Validate that all type annotations, function signatures, and class structures are compatible with both the IDE and static analysis tools.
+- Confirm that the final TypeScript code passes all checks from ESLint, Resharper, and the TypeScript compiler as configured in tsconfig.json.
+- Ensure the code is ready for deployment via npm/Clasp and is fully compatible with Google Apps Script and the project's static analysis tools.
+
+End of Prompt

@@ -1,48 +1,35 @@
-/**
- * Lightweight parsing utilities used across models.
- * Exports ParseType enum and parse helpers, including a high-level parseField.
- *
- * All functions are purely functional and safe to unit-test independently.
- */
+type ParseType = any;
 
-/**
- * Enum for parse types.
- */
-export enum ParseType {
-    STRING = "string",
-    FLOAT = "float",
-    INT = "int",
-    BOOLEAN = "boolean",
-    DATE = "date"
-}
+const parseType: any = {
+    STRING: "string",
+    FLOAT: "float",
+    INT: "int",
+    BOOLEAN: "boolean",
+    DATE: "date"
+};
 
-/**
- * Resolve a value from `rawJson` using `key` (string or array of alternative keys).
- * If no key is present returns `defaultValue`.
- */
-export function resolveValue<T>(
-    rawJson: Record<string, any> | null | undefined,
-    key: string | string[],
-    defaultValue: T
-): T {
+function resolveValue(rawJson: string, key: string, defaultValue: any): any {
     if (!rawJson || typeof rawJson !== "object") return defaultValue;
 
     if (Array.isArray(key)) {
-        for (const k of key) {
-            const v = rawJson[k];
-            if (v != null) return v;
+        for (let i = 0; i < key.length; i++) {
+            const k = key[i];
+            if (Object.prototype.hasOwnProperty.call(rawJson, k)) {
+                const v = rawJson[k];
+                if (v !== "" && v !== null && v !== undefined) return v;
+            }
         }
         return defaultValue;
     }
 
-    return rawJson[key] != null ? rawJson[key] : defaultValue;
+    if (Object.prototype.hasOwnProperty.call(rawJson, key)) {
+        const v = rawJson[key];
+        if (v !== "" && v !== null && v !== undefined) return v;
+    }
+    return defaultValue;
 }
 
-/**
- * Parse value as string.
- * Accepts only actual strings; falls back to `defaultValue` (if string) or empty string.
- */
-export function parseAsString(value: unknown, defaultValue?: string): string {
+function parseAsString(value: string, defaultValue: string): string {
     if (typeof value !== "string") {
         return typeof defaultValue === "string" ? defaultValue : "";
     }
@@ -50,82 +37,63 @@ export function parseAsString(value: unknown, defaultValue?: string): string {
     return trimmed !== "" ? trimmed : (typeof defaultValue === "string" ? defaultValue : "");
 }
 
-/**
- * Parse value as floating point number.
- * Rejects objects/booleans and falls back to `defaultValue` (if number) or 0.0.
- */
-export function parseAsFloat(value: unknown, defaultValue?: number): number {
+function parseAsFloat(value: string, defaultValue: number): number {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0.0;
     }
-    if (value === "" || value == null) {
+    if (value === "") {
         return typeof defaultValue === "number" ? defaultValue : 0.0;
     }
     const num = Number(value);
     return Number.isFinite(num) ? num : (typeof defaultValue === "number" ? defaultValue : 0.0);
 }
 
-/**
- * Parse value as integer.
- * Rejects objects/booleans and falls back to `defaultValue` (if number) or 0.
- */
-export function parseAsInt(value: unknown, defaultValue?: number): number {
+function parseAsInt(value: string, defaultValue: number): number {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0;
     }
-    if (value === "" || value == null) {
+    if (value === "") {
         return typeof defaultValue === "number" ? defaultValue : 0;
     }
     const parsed = parseInt(value as string, 10);
     return Number.isFinite(parsed) ? parsed : (typeof defaultValue === "number" ? defaultValue : 0);
 }
 
-/**
- * Parse value as boolean.
- * Accepts boolean primitives, numeric values (0 => false, non-zero => true),
- * common truthy/falsey strings ("true","false","1","0","yes","no","on","off","y","n"),
- * and numeric strings.
- * Falls back to `defaultValue` (if boolean) or false.
- */
-export function parseAsBoolean(value: unknown, defaultValue?: boolean): boolean {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "number") return value !== 0;
+function parseAsBoolean(value: string, defaultValue: boolean): boolean {
     if (typeof value === "string") {
-        const s = value.trim().toLowerCase();
-        if (s === "") return typeof defaultValue === "boolean" ? defaultValue : false;
-        if (["true", "1", "yes", "y", "on"].includes(s)) return true;
-        if (["false", "0", "no", "n", "off"].includes(s)) return false;
-        if (/^-?\d+$/.test(s)) return Number(s) !== 0;
-        return typeof defaultValue === "boolean" ? defaultValue : false;
+        const str = value.trim().toLowerCase();
+        if (str === "") return typeof defaultValue === "boolean" ? defaultValue : false;
+        switch (str) {
+            case "true":
+            case "1":
+            case "yes":
+            case "y":
+            case "on":
+                return true;
+            case "false":
+            case "0":
+            case "no":
+            case "n":
+            case "off":
+                return false;
+            default:
+                if (/^-?\d+$/.test(str)) return Number(str) !== 0;
+                return typeof defaultValue === "boolean" ? defaultValue : false;
+        }
     }
     return typeof defaultValue === "boolean" ? defaultValue : false;
 }
 
-/**
- * Convert .NET ticks (100-ns intervals since 0001-01-01) to a Date.
- * .NET ticks are the number of 100-nanosecond intervals since 0001-01-01T00:00:00.
- * Conversion:
- *   ms = Math.floor((ticks - 621355968000000000) / 10000)
- *
- * Accepts numeric strings as well as numbers. Returns null for invalid inputs.
- */
-export function fromDotNetTicks(ticks: number | string): Date | null {
-    const DOTNET_TICKS_AT_UNIX_EPOCH = 621355968000000000;
+function fromDotNetTicks(ticks: number): Date {
+    const dotnetTicksAtUnixEpoch = 621355968000000000;
     const num = typeof ticks === "string" ? Number(ticks) : ticks;
-    if (!Number.isFinite(num)) return null;
-    const ms = Math.floor((num - DOTNET_TICKS_AT_UNIX_EPOCH) / 10000);
+    if (!Number.isFinite(num)) return new Date(0);
+    const ms = Math.floor((num - dotnetTicksAtUnixEpoch) / 10000);
     return new Date(ms);
 }
 
-/**
- * Convert a numeric timestamp-like value to a Date.
- * Heuristics:
- * - |n| > 1e14 => treat as .NET ticks (calls `fromDotNetTicks`)
- * - |n| < 1e11 => treat as Unix seconds and convert to milliseconds
- * - otherwise treat as milliseconds
- */
-export function numericToDate(n: number): Date | null {
-    if (!Number.isFinite(n)) return null;
+function numericToDate(n: any): any {
+    if (!Number.isFinite(n)) return new Date(0);
     const abs = Math.abs(n);
 
     if (abs > 1e14) {
@@ -139,148 +107,94 @@ export function numericToDate(n: number): Date | null {
     return new Date(Math.floor(n));
 }
 
-/**
- * Parse value as Date.
- * Supported inputs:
- * - Date instance (returned as-is)
- * - number: seconds, milliseconds, or .NET ticks (heuristic)
- * - numeric string: same as number
- * - Microsoft JSON wrapper '/Date(<num>[+zzzz])/' where <num> is ms or ticks
- * - ISO 8601 / RFC3339 strings (many common variants). Normalizes timezone offsets without colon.
- * - Falls back to Date.parse() for permissive parsing before returning default.
- */
-export function parseAsDate(value: unknown, defaultValue: Date | null = null): Date | null {
-    let dateObj: Date | null = null;
+function parseAsDate(value: string, defaultValue: Date): Date {
+    if (!defaultValue || !(defaultValue instanceof Date)) {
+        defaultValue = new Date(0);
+    }
+
+    const trimmed = value.trim();
+    if (trimmed === "") {
+        return defaultValue;
+    }
+
+    // .NET /Date(xxx)/ format
+    const msWrapperMatch = /^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/.exec(trimmed);
+    if (msWrapperMatch) {
+        const dateObj = numericToDate(Number(msWrapperMatch[1]));
+        return !isNaN(dateObj.getTime()) ? dateObj : defaultValue;
+    }
+
+    // Numeric timestamp
+    if (/^-?\d+$/.test(trimmed)) {
+        const dateObj = numericToDate(Number(trimmed));
+        return !isNaN(dateObj.getTime()) ? dateObj : defaultValue;
+    }
+
+    // ISO 8601 format
     const iso8601Regex = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?(?:Z|[+-]\d{2}:\d{2}|[+-]\d{4})?$/;
-
-    if (value instanceof Date) {
-        dateObj = value;
-    } else if (typeof value === "number") {
-        dateObj = numericToDate(value);
-    } else if (typeof value === "string") {
-        const trimmed = value.trim();
-
-        // MS JSON wrapper: /Date(<num>)/ optionally with timezone
-        const msWrapperMatch = /^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/.exec(trimmed);
-        if (msWrapperMatch) {
-            dateObj = numericToDate(Number(msWrapperMatch[1]));
+    if (iso8601Regex.test(trimmed)) {
+        const normalized = trimmed.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
+        const dateObj = new Date(normalized);
+        if (!isNaN(dateObj.getTime())) {
+            return dateObj;
         }
-        // pure numeric string (seconds, ms, or ticks)
-        else if (/^-?\d+$/.test(trimmed)) {
-            dateObj = numericToDate(Number(trimmed));
+        const parsed = Date.parse(trimmed);
+        if (!isNaN(parsed)) {
+            return new Date(parsed);
         }
-        // likely ISO-ish
-        else if (iso8601Regex.test(trimmed)) {
-            // Normalize timezone offset without colon (e.g. +0200 -> +02:00)
-            const normalized = trimmed.replace(/([+-]\d{2})(\d{2})$/, "$1:$2");
-            dateObj = new Date(normalized);
-
-            // Fallback to Date.parse for variants not covered by the regex
-            if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
-                const parsed = Date.parse(trimmed);
-                if (!isNaN(parsed)) dateObj = new Date(parsed);
-            }
-        } else {
-            // permissive fallback
-            const parsedFallback = Date.parse(trimmed);
-            if (!isNaN(parsedFallback)) {
-                dateObj = new Date(parsedFallback);
-            } else {
-                return defaultValue instanceof Date ? defaultValue : null;
-            }
-        }
-    } else {
-        return defaultValue instanceof Date ? defaultValue : null;
+        return defaultValue;
     }
 
-    if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
-        return dateObj;
+    // Fallback: try Date.parse
+    const parsedFallback = Date.parse(trimmed);
+    if (!isNaN(parsedFallback)) {
+        return new Date(parsedFallback);
     }
-    return defaultValue instanceof Date ? defaultValue : null;
+
+    return defaultValue;
 }
-
-/**
- * Serialize a string-like value. Mirrors parseAsString trimming/empty fallback.
- */
-export function serializeString(value: unknown, defaultValue?: string): string {
+function serializeString(value: string, defaultValue: any): any {
     return parseAsString(value, defaultValue);
 }
 
-/**
- * Serialize a float-like value.
- * - If already a number, returns it
- * - If null/empty returns `defaultValue` (or 0)
- * - Otherwise attempts numeric coercion via parseAsFloat
- */
-export function serializeFloat(value: unknown, defaultValue?: number): number {
+function serializeFloat(value: any, defaultValue: any): any {
     if (typeof value === "number") return value;
-    if (value == null || value === "") return typeof defaultValue === "number" ? defaultValue : 0;
+    if (value === "") return typeof defaultValue === "number" ? defaultValue : 0;
     return parseAsFloat(value, typeof defaultValue === "number" ? defaultValue : 0);
 }
 
-/**
- * Serialize an integer-like value.
- * - If already a number, returns it
- * - If null/empty returns `defaultValue` (or 0)
- * - Otherwise attempts integer coercion via parseAsInt
- */
-export function serializeInt(value: unknown, defaultValue?: number): number {
+function serializeInt(value: any, defaultValue: any): any {
     if (typeof value === "number") return value;
-    if (value == null || value === "") return typeof defaultValue === "number" ? defaultValue : 0;
+    if (value === "") return typeof defaultValue === "number" ? defaultValue : 0;
     return parseAsInt(value, typeof defaultValue === "number" ? defaultValue : 0);
 }
 
-/**
- * Serialize a date-like value into an ISO string or null.
- * - If input is Date, returns toISOString()
- * - If input can be parsed into Date, returns ISO
- * - Otherwise returns existing string value or null
- */
-export function serializeDate(value: unknown): string | null {
+function serializeDate(value: any): any {
     if (value instanceof Date) return value.toISOString();
-    const parsed = parseAsDate(value, null);
+    const parsed = parseAsDate(value, new Date(0));
     if (parsed instanceof Date) return parsed.toISOString();
-    return typeof value === "string" ? value : null;
+    return typeof value === "string" ? value : "";
 }
 
-/**
- * Central serialize function delegating to type-specific helpers.
- *
- * Usage: serializeType(value, ParseType.FLOAT, 0)
- */
-export function serializeType(
-    value: unknown,
-    type: ParseType,
-    defaultValue?: unknown
-): string | number | boolean | null {
-    if (type === ParseType.STRING) return serializeString(value, defaultValue as string);
-    if (type === ParseType.FLOAT) return serializeFloat(value, defaultValue as number);
-    if (type === ParseType.INT) return serializeInt(value, defaultValue as number);
-    if (type === ParseType.DATE) return serializeDate(value);
-    if (type === ParseType.BOOLEAN) {
-        // boolean serialization: try parseAsBoolean so strings/numbers are handled; preserve default if invalid
+function serializeType(value: any, type: any, defaultValue: any): any {
+    if (type === parseType.STRING) return serializeString(value, defaultValue);
+    if (type === parseType.FLOAT) return serializeFloat(value, defaultValue);
+    if (type === parseType.INT) return serializeInt(value, defaultValue);
+    if (type === parseType.DATE) return serializeDate(value);
+    if (type === parseType.BOOLEAN) {
         return parseAsBoolean(value, typeof defaultValue === "boolean" ? defaultValue : false);
     }
-    return null;
+    return "";
 }
 
-/**
- * Central parse function delegating to type-specific helpers.
- */
-export function parseField(
-    rawJson: Record<string, any> | null | undefined,
-    key: string | string[],
-    type: ParseType,
-    defaultValue?: unknown
-): string | number | boolean | Date | null {
+function parseField(rawJson: any, key: any, type: any, defaultValue: any): any {
     const valueToParse = resolveValue(rawJson, key, defaultValue);
 
-    if (type === ParseType.STRING) return parseAsString(valueToParse, defaultValue as string);
-    if (type === ParseType.FLOAT) return parseAsFloat(valueToParse, defaultValue as number);
-    if (type === ParseType.INT) return parseAsInt(valueToParse, defaultValue as number);
-    if (type === ParseType.BOOLEAN) return parseAsBoolean(valueToParse, defaultValue as boolean);
-    if (type === ParseType.DATE) return parseAsDate(valueToParse, defaultValue as Date | null);
+    if (type === parseType.STRING) return parseAsString(valueToParse, defaultValue);
+    if (type === parseType.FLOAT) return parseAsFloat(valueToParse, defaultValue);
+    if (type === parseType.INT) return parseAsInt(valueToParse, defaultValue);
+    if (type === parseType.BOOLEAN) return parseAsBoolean(valueToParse, defaultValue);
+    if (type === parseType.DATE) return parseAsDate(valueToParse, defaultValue);
 
-    // Unknown type, return null
-    return null;
+    return "";
 }

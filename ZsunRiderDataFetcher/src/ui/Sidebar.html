@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body {
+            font-family: Roboto, Arial, sans-serif;
+            margin: 12px;
+        }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-weight: 500;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin: 8px 0;
+            align-items: center;
+        }
+
+        select, input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px;
+            font-size: 14px;
+            border: 0;
+            background: #1a73e8;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            button.secondary {
+                background: #e8eaf6;
+                color: #1a237e;
+                border: none;
+            }
+
+            button:disabled {
+                opacity: 0.6;
+                cursor: default;
+            }
+
+        .note {
+            font-size: 12px;
+            color: #555;
+            margin-top: 8px;
+        }
+
+        .small {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Status area styles */
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            background: transparent;
+        }
+
+        /* Short summary (clamped to 3 lines) */
+        .status__text {
+            flex: 1;
+            font-size: 12px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            /* Clamp to 3 lines, show ellipsis where supported */
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: calc(1.25em * 3);
+        }
+
+        .status__close {
+            display: none;
+            padding: 2px 6px;
+            font-size: 12px;
+            line-height: 1;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .status__detailsLink {
+            display: none;
+            padding: 2px 6px;
+            font-size: 12px;
+            line-height: 1;
+            border: 0;
+            background: transparent;
+            color: #1a73e8;
+            cursor: pointer;
+        }
+
+        .status--error {
+            color: #b00020;
+            background: rgba(176, 0, 32, 0.04);
+        }
+
+        .status--ok {
+            color: #2e7d32;
+            background: rgba(46, 125, 50, 0.04);
+        }
+
+        /* Details panel */
+        .status__details {
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background: #f7f7fb;
+            border: 1px solid #ececec;
+            font-size: 12px;
+            display: none;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+            .status__details pre {
+                margin: 0;
+                padding: 8px;
+                background: #fff;
+                border-radius: 4px;
+                border: 1px solid #e5e5e5;
+                max-height: 120px;
+                overflow: auto;
+                white-space: pre-wrap;
+                word-break: break-word;
+                font-family: inherit;
+                font-size: 12px;
+            }
+
+            .status__details .actions {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+        /* Spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(0,0,0,0.08);
+            border-top-color: white;
+            border-radius: 50%;
+            box-sizing: border-box;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 6px;
+            transform: translateY(-1px);
+            animation: spin 1s linear infinite;
+            visibility: hidden;
+        }
+
+        .spinner--visible {
+            visibility: visible;
+            border-top-color: #fff;
+        }
+
+        /* For secondary-button spinner contrast */
+        button.secondary .spinner {
+            border-top-color: #1a237e;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* compact control group */
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h3>Worksheet updater</h3>
+
+    <div class="row">
+        <select id="method" aria-label="Input method">
+            <option value="mydrive">My Drive (filename)</option>
+            <option value="gdrive">Google Drive link</option>
+            <option value="url">URL (http/https)</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <input id="targetInput" type="text" placeholder="Enter filename, shared Google Drive link, or URL" aria-label="Target file or URL" />
+    </div>
+
+    <div class="row controls">
+        <button id="refreshBtn" title="Refresh (Ctrl+Enter)">Refresh <span id="refreshSpinner" class="spinner" aria-hidden="true"></span></button>
+        <button id="helpBtn" class="secondary">Help</button>
+        <button id="closeBtn" class="secondary" aria-label="Close sidebar">Close</button>
+    </div>
+
+    <!-- status: aria-live for screen readers, visual dismiss button -->
+    <div id="status" class="small note status" aria-live="polite">
+        <span class="status__text" id="statusText"></span>
+        <button id="statusDetailsLink" class="status__detailsLink" aria-expanded="false">Details</button>
+        <button id="statusClose" class="status__close" aria-label="Dismiss status">x</button>
+
+        <!-- Details panel (hidden by default) -->
+        <div id="statusDetails" class="status__details" role="region" aria-label="Status details">
+            <pre id="statusDetailsText" tabindex="0"></pre>
+            <div class="actions">
+                <button id="copyDetailsBtn">Copy</button>
+                <button id="closeDetailsBtn" class="secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const LS_METHOD = 'ws_last_method';
+            const LS_TARGET = 'ws_last_target';
+
+            const methodEl = document.getElementById('method');
+            const inputEl = document.getElementById('targetInput');
+            const statusEl = document.getElementById('status');
+            const statusTextEl = document.getElementById('statusText');
+            const statusCloseBtn = document.getElementById('statusClose');
+            const statusDetailsLink = document.getElementById('statusDetailsLink');
+            const statusDetails = document.getElementById('statusDetails');
+            const statusDetailsText = document.getElementById('statusDetailsText');
+            const copyDetailsBtn = document.getElementById('copyDetailsBtn');
+            const closeDetailsBtn = document.getElementById('closeDetailsBtn');
+
+            const refreshBtn = document.getElementById('refreshBtn');
+            const helpBtn = document.getElementById('helpBtn');
+            const closeBtn = document.getElementById('closeBtn');
+            const spinnerEl = document.getElementById('refreshSpinner');
+
+            // Client-side logging helpers (masking + sampling)
+            const CLIENT_LOG_SAMPLE_RATE = 0.25; // 25% sampling by default
+            const _clientLogSeen = new Set();    // dedupe per session
+
+            function generateCorrelationId() {
+                // short base36 id
+                return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
+            }
+
+            function maskForLogging(method, value) {
+                if (!value) return "";
+                try {
+                    const v = value.trim();
+                    if (method === 'url') {
+                        // Keep scheme only, redact the rest to avoid leaking paths/queries
+                        return v.replace(/^(https?:\/\/)(.*)$/, '$1[REDACTED]');
+                    }
+                    if (method === 'gdrive') {
+                        // Try to extract a Drive ID and return only the ID (or redact)
+                        const m = v.match(/\/d\/([-\w]{10,})/) || v.match(/[?&]id=([-\w]{10,})/) || v.match(/([-\w]{25,})/);
+                        return m && m[1] ? m[1] : '[REDACTED_DRIVE]';
+                    }
+                    if (method === 'mydrive') {
+                        // Truncate long filenames
+                        if (v.length > 120) return v.slice(0, 120) + '...';
+                        return v;
+                    }
+                    return '[REDACTED]';
+                } catch (e) {
+                    return '[REDACTED]';
+                }
+            }
+
+            function fingerprintForLogging(operation, message, maskedTarget) {
+                // simple fingerprint: operation + message summary + target
+                const m = (message || '').replace(/\s+/g, ' ').slice(0, 200);
+                return operation + '|' + m + '|' + (maskedTarget || '');
+            }
+
+            function shouldLogClientError(fingerprint) {
+                // If we've already logged this fingerprint in this session, skip to reduce noise.
+                if (_clientLogSeen.has(fingerprint)) return false;
+                // Sample new fingerprints with SAMPLE_RATE probability.
+                const roll = Math.random();
+                if (roll <= CLIENT_LOG_SAMPLE_RATE) {
+                    _clientLogSeen.add(fingerprint);
+                    return true;
+                }
+                // If not sampled, still add to seen set to avoid repeated evaluation in this session.
+                _clientLogSeen.add(fingerprint);
+                return false;
+            }
+
+            let busyCount = 0;
+            function setBusy(on) {
+                if (on) busyCount++; else busyCount = Math.max(0, busyCount - 1);
+                const isBusy = busyCount > 0;
+                refreshBtn.disabled = isBusy;
+                helpBtn.disabled = isBusy;
+                closeBtn.disabled = isBusy;
+                spinnerEl.classList.toggle('spinner--visible', isBusy);
+            }
+
+            /*
+             Developer guidance - formatting short status/error messages
+
+             - Purpose:
+               The inline status area is a short, glanceable summary. Keep the inline summary
+               concise so it stays readable in the 320px sidebar. Use the Details panel for full
+               error stacks, long URLs, or debugging output.
+
+             - Length recommendations:
+               * Single-line: aim for <= 40 characters (short action/result).
+               * Multi-line summary: allow up to 3 lines (approx 80-120 characters total).
+               * If message is longer or contains newlines / long URLs, place the full text
+                 in the Details panel and show a short human-friendly summary inline.
+
+             - Format guidelines:
+               * Use sentence case, not ALL CAPS.
+               * Start with a clear status token when helpful (e.g. "Failed:" or "Saved:").
+               * Include a short human action when appropriate (e.g. "Try reloading the file.").
+               * Don't include raw stack traces or long query strings in the inline summary.
+
+             - Line breaks and word-wrapping:
+               * Break lines at logical boundaries (after a phrase, before a stack trace or JSON).
+               * For long unbroken tokens (URLs, IDs) rely on CSS (`overflow-wrap: anywhere`)
+                 so the UI doesn't overflow the sidebar.
+               * Use the Details panel (preformatted) to preserve original line breaks.
+
+             - Accessibility and discoverability:
+               * Keep a short inline summary; set the `title` attribute to the full message so
+                 users can hover to read it.
+               * Provide a "Details" link that expands the full message and a Copy button so
+                 users can copy full error text for bug reports.
+
+             - Example:
+               Inline (summary): "Failed: file not found - check access"
+               Details (expanded): "Error: File not found at path /foo/bar. Full stack:\n    at ..."
+
+             These rules keep the sidebar compact and readable while enabling access to full
+             diagnostic information when needed.
+            */
+
+            function shouldShowDetails(msg) {
+                if (!msg) return false;
+                return msg.length > 100 || msg.indexOf('\n') !== -1 || /https?:\/\//.test(msg);
+            }
+
+            function showStatus(msg, isError) {
+                const safeMsg = msg || '';
+                // short clamped summary
+                statusTextEl.textContent = safeMsg;
+                statusTextEl.title = safeMsg; // full text on hover
+
+                // details panel content (preformatted)
+                statusDetailsText.textContent = safeMsg;
+
+                // styles
+                statusEl.classList.toggle('status--error', !!isError && !!safeMsg);
+                statusEl.classList.toggle('status--ok', !isError && !!safeMsg);
+
+                // controls visibility
+                statusCloseBtn.style.display = safeMsg ? 'inline-block' : 'none';
+
+                // show Details link only when message likely needs expansion
+                const showDetails = shouldShowDetails(safeMsg);
+                statusDetailsLink.style.display = showDetails ? 'inline-block' : 'none';
+                statusDetailsLink.setAttribute('aria-expanded', 'false');
+
+                // hide expanded details when updating message
+                statusDetails.style.display = 'none';
+            }
+
+            function validate(method, value) {
+                if (!value || value.trim() === '') return 'Value is required.';
+                if (method === 'url') {
+                    try {
+                        const u = new URL(value.trim());
+                        if (!/^https?:$/i.test(u.protocol)) return 'Only http/https URLs are allowed.';
+                    } catch (e) {
+                        return 'Invalid URL format.';
+                    }
+                }
+                if (method === 'gdrive') {
+                    const v = value.trim();
+                    if (!/[-\w]{25,}/.test(v) && !/drive\.google\.com/.test(v)) {
+                        return 'Enter a valid Google Drive / Sheet link or ID.';
+                    }
+                }
+                return '';
+            }
+
+            function saveLast(method, target) {
+                try {
+                    localStorage.setItem(LS_METHOD, method);
+                    localStorage.setItem(LS_TARGET, target);
+                } catch (e) {
+                    // ignore storage errors
+                }
+            }
+
+            function loadLast() {
+                try {
+                    const m = localStorage.getItem(LS_METHOD);
+                    const t = localStorage.getItem(LS_TARGET);
+                    if (m) methodEl.value = m;
+                    if (t) inputEl.value = t;
+                } catch (e) { /* ignore */ }
+            }
+
+            function extractDriveId(value) {
+                if (!value) return '';
+                const trimmed = value.trim();
+                const byD = trimmed.match(/\/d\/([-\w]{10,})/);
+                if (byD && byD[1]) return byD[1];
+                const idParam = trimmed.match(/[?&]id=([-\w]{10,})/);
+                if (idParam && idParam[1]) return idParam[1];
+                const generic = trimmed.match(/([-\w]{25,})/);
+                if (generic && generic[1]) return generic[1];
+                return '';
+            }
+
+            function callServer(method, value) {
+                const correlationId = generateCorrelationId();
+
+                setBusy(true);
+                showStatus('Sending request...', false);
+                saveLast(method, value);
+
+                const handlers = {
+                    success: function (msg) {
+                        setBusy(false);
+                        showStatus(msg || 'Done', false);
+                    },
+                    failure: function (err) {
+                        setBusy(false);
+                        const text = (err && (err.message || err.toString())) || 'unknown';
+                        showStatus('Failed: ' + text, true);
+
+                        // Prepare structured context for server logging
+                        try {
+                            const errStack = (err && err.stack) ? err.stack : (err && err.toString ? err.toString() : String(err));
+                            const masked = maskForLogging(method, value);
+                            const fingerprint = fingerprintForLogging(method, text, masked);
+
+                            // Only send sampled, de-duplicated client errors to avoid noise and privacy leaks.
+                            if (shouldLogClientError(fingerprint)) {
+                                // Fire-and-forget server-side logging. Swallow any logging failures.
+                                try {
+                                    google.script.run
+                                        .withFailureHandler(function () { /* swallow logging failures */ })
+                                        .reportError(text, method, errStack);
+                                } catch (e) {
+                                    // ignore if google.script.run not present
+                                }
+                            }
+                        } catch (e) {
+                            // Defensive: never surface logging errors to user
+                        }
+                    }
+                };
+
+                if (method === 'mydrive') {
+                    google.script.run
+                        .withSuccessHandler(handlers.success)
+                        .withFailureHandler(handlers.failure)
+                        .importRidersFromMyDrive(value.trim());
+                } else if (method === 'gdrive') {
+                    google.script.run
+                        .withSuccessHandler(handlers.success)
+                        .withFailureHandler(handlers.failure)
+                        .importRidersFromGoogleDriveLink(value.trim());
+                } else if (method === 'url') {
+                    google.script.run
+                        .withSuccessHandler(handlers.success)
+                        .withFailureHandler(handlers.failure)
+                        .importRidersFromUrl(value.trim());
+                } else {
+                    setBusy(false);
+                    showStatus('Unknown method', true);
+                }
+            }
+
+            // paste detection
+            inputEl.addEventListener('paste', function (ev) {
+                setTimeout(() => {
+                    const val = inputEl.value || '';
+                    if (/drive\.google\.com|docs\.google\.com|spreadsheets\.google\.com/i.test(val)) {
+                        const id = extractDriveId(val);
+                        if (id) {
+                            methodEl.value = 'gdrive';
+                            inputEl.value = id;
+                            showStatus('Detected Drive link; extracted ID.', false);
+                        }
+                    }
+                }, 50);
+            });
+
+            // Refresh click
+            refreshBtn.addEventListener('click', function () {
+                const method = methodEl.value;
+                const value = inputEl.value || '';
+                const err = validate(method, value);
+                if (err) {
+                    showStatus(err, true);
+                    return;
+                }
+                callServer(method, value);
+            });
+
+            // Help click
+            helpBtn.addEventListener('click', function () {
+                google.script.run.showHelpDocument();
+            });
+
+            // Close sidebar explicitly
+            closeBtn.addEventListener('click', function () {
+                if (busyCount > 0) {
+                    showStatus('Operation in progress - please wait.', true);
+                    return;
+                }
+                google.script.host.close();
+            });
+
+            // Dismiss status
+            statusCloseBtn.addEventListener('click', function () {
+                showStatus('', false);
+            });
+
+            // Toggle details panel
+            statusDetailsLink.addEventListener('click', function () {
+                const expanded = statusDetails.style.display === 'flex';
+                if (expanded) {
+                    statusDetails.style.display = 'none';
+                    statusDetailsLink.setAttribute('aria-expanded', 'false');
+                } else {
+                    statusDetails.style.display = 'flex';
+                    statusDetailsLink.setAttribute('aria-expanded', 'true');
+                    // focus the details content for keyboard users
+                    statusDetailsText.focus();
+                }
+            });
+
+            // Close details action
+            closeDetailsBtn.addEventListener('click', function () {
+                statusDetails.style.display = 'none';
+                statusDetailsLink.setAttribute('aria-expanded', 'false');
+            });
+
+            // Copy details to clipboard (with fallback)
+            copyDetailsBtn.addEventListener('click', function () {
+                const text = statusDetailsText.textContent || '';
+                if (!text) {
+                    showStatus('Nothing to copy', true);
+                    return;
+                }
+
+                // Try navigator.clipboard first
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showStatus('Copied to clipboard', false);
+                    }).catch(() => {
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+
+                function fallbackCopy(t) {
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = t;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        const ok = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        if (ok) showStatus('Copied to clipboard', false);
+                        else showStatus('Copy failed', true);
+                    } catch (e) {
+                        showStatus('Copy failed', true);
+                    }
+                }
+            });
+
+            // Keyboard shortcuts for input
+            inputEl.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
+                    ev.preventDefault();
+                    refreshBtn.click();
+                } else if (ev.key === 'Escape') {
+                    ev.preventDefault();
+                    if (ev.shiftKey) {
+                        closeBtn.click();
+                    } else {
+                        showStatus('', false);
+                    }
+                }
+            });
+
+            // Initial load
+            loadLast();
+            inputEl.focus();
+            setBusy(false);
+            showStatus('', false);
+
+        })();
+    </script>
+</body>
+</html>
