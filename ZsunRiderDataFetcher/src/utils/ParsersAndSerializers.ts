@@ -1,35 +1,81 @@
-type ParseType = any;
-
-const parseType: any = {
-    STRING: "string",
-    FLOAT: "float",
-    INT: "int",
-    BOOLEAN: "boolean",
-    DATE: "date"
+export type ParseType = {
+    stringType: string;
+    floatType: string;
+    intType: string;
+    booleanType: string;
+    dateType: string;
 };
 
-function resolveValue(rawJson: string, key: string, defaultValue: any): any {
+export const parseType: ParseType = {
+    stringType: "string",
+    floatType: "float",
+    intType: "int",
+    booleanType: "boolean",
+    dateType: "date"
+};
+
+/**
+ * Parses a field from a JSON object using an array of possible field aliases.
+ *
+ * @param rawJson - The JSON object to extract the value from.
+ * @param fieldAliases - An array of strings representing possible property names (aliases).
+ * @param type - The expected type of the value.
+ * @param defaultValue - The value to return if no valid property is found.
+ * @returns The parsed value, or `defaultValue` if not found or invalid.
+ */
+export function parseField(
+    rawJson: string,
+    fieldAliases: string[],
+    type: string,
+    defaultValue: string | number | boolean | Date
+): string | number | boolean | Date | null {
+    const valueToParse = getJsonFieldValueByFieldAliases(rawJson, fieldAliases, defaultValue);
+
+    if (type === parseType.stringType) return parseAsString(valueToParse, defaultValue as string);
+    if (type === parseType.floatType) return parseAsFloat(valueToParse, defaultValue as number);
+    if (type === parseType.intType) return parseAsInt(valueToParse, defaultValue as number);
+    if (type === parseType.booleanType) return parseAsBoolean(valueToParse, defaultValue as boolean);
+    if (type === parseType.dateType) return parseAsDate(valueToParse, defaultValue as Date);
+
+    // Unknown type, return null
+    return null;
+}
+
+/**
+ * Safely retrieves a value from a JSON object using one or more possible
+ * field aliases for the underlying property.
+ *
+ * - Checks each alias in the array in order and returns the first valid value found.
+ * - If no valid value is found, returns `defaultValue`.
+ *
+ * @param rawJson - The object to extract the value from.
+ * @param fieldAliases - An array of strings representing possible property names (aliases).
+ * @param defaultValue - The value to return if no valid property is found.
+ * @returns The extracted value, or `defaultValue` if not found or invalid.
+ *
+ * @example
+ * const json = { user_id: 42, name: "Alice" };
+ * const value = getJsonFieldValueByFieldAliases(json, ["userid", "user_id", "id"], 0);
+ * // value === 42
+ */
+export function getJsonFieldValueByFieldAliases(
+    rawJson: any,
+    fieldAliases: string[],
+    defaultValue: any
+): any {
     if (!rawJson || typeof rawJson !== "object") return defaultValue;
 
-    if (Array.isArray(key)) {
-        for (let i = 0; i < key.length; i++) {
-            const k = key[i];
-            if (Object.prototype.hasOwnProperty.call(rawJson, k)) {
-                const v = rawJson[k];
-                if (v !== "" && v !== null && v !== undefined) return v;
-            }
+    for (let i = 0; i < fieldAliases.length; i++) {
+        const k = fieldAliases[i];
+        if (Object.prototype.hasOwnProperty.call(rawJson, k)) {
+            const v = rawJson[k];
+            if (v !== "" && v !== null && v !== undefined) return v;
         }
-        return defaultValue;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(rawJson, key)) {
-        const v = rawJson[key];
-        if (v !== "" && v !== null && v !== undefined) return v;
     }
     return defaultValue;
 }
 
-function parseAsString(value: string, defaultValue: string): string {
+export function parseAsString(value: any, defaultValue: string): string {
     if (typeof value !== "string") {
         return typeof defaultValue === "string" ? defaultValue : "";
     }
@@ -37,7 +83,7 @@ function parseAsString(value: string, defaultValue: string): string {
     return trimmed !== "" ? trimmed : (typeof defaultValue === "string" ? defaultValue : "");
 }
 
-function parseAsFloat(value: string, defaultValue: number): number {
+export function parseAsFloat(value: any, defaultValue: number): number {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0.0;
     }
@@ -48,7 +94,7 @@ function parseAsFloat(value: string, defaultValue: number): number {
     return Number.isFinite(num) ? num : (typeof defaultValue === "number" ? defaultValue : 0.0);
 }
 
-function parseAsInt(value: string, defaultValue: number): number {
+export function parseAsInt(value: any, defaultValue: number): number {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0;
     }
@@ -59,7 +105,7 @@ function parseAsInt(value: string, defaultValue: number): number {
     return Number.isFinite(parsed) ? parsed : (typeof defaultValue === "number" ? defaultValue : 0);
 }
 
-function parseAsBoolean(value: string, defaultValue: boolean): boolean {
+export function parseAsBoolean(value: any, defaultValue: boolean): boolean {
     if (typeof value === "string") {
         const str = value.trim().toLowerCase();
         if (str === "") return typeof defaultValue === "boolean" ? defaultValue : false;
@@ -84,7 +130,7 @@ function parseAsBoolean(value: string, defaultValue: boolean): boolean {
     return typeof defaultValue === "boolean" ? defaultValue : false;
 }
 
-function fromDotNetTicks(ticks: number): Date {
+export function fromDotNetTicks(ticks: number | string): Date {
     const dotnetTicksAtUnixEpoch = 621355968000000000;
     const num = typeof ticks === "string" ? Number(ticks) : ticks;
     if (!Number.isFinite(num)) return new Date(0);
@@ -92,7 +138,7 @@ function fromDotNetTicks(ticks: number): Date {
     return new Date(ms);
 }
 
-function numericToDate(n: any): any {
+export function numericToDate(n: number): Date {
     if (!Number.isFinite(n)) return new Date(0);
     const abs = Math.abs(n);
 
@@ -107,12 +153,12 @@ function numericToDate(n: any): any {
     return new Date(Math.floor(n));
 }
 
-function parseAsDate(value: string, defaultValue: Date): Date {
+export function parseAsDate(value: any, defaultValue: Date): Date {
     if (!defaultValue || !(defaultValue instanceof Date)) {
         defaultValue = new Date(0);
     }
 
-    const trimmed = value.trim();
+    const trimmed = typeof value === "string" ? value.trim() : "";
     if (trimmed === "") {
         return defaultValue;
     }
@@ -152,49 +198,4 @@ function parseAsDate(value: string, defaultValue: Date): Date {
     }
 
     return defaultValue;
-}
-function serializeString(value: string, defaultValue: any): any {
-    return parseAsString(value, defaultValue);
-}
-
-function serializeFloat(value: any, defaultValue: any): any {
-    if (typeof value === "number") return value;
-    if (value === "") return typeof defaultValue === "number" ? defaultValue : 0;
-    return parseAsFloat(value, typeof defaultValue === "number" ? defaultValue : 0);
-}
-
-function serializeInt(value: any, defaultValue: any): any {
-    if (typeof value === "number") return value;
-    if (value === "") return typeof defaultValue === "number" ? defaultValue : 0;
-    return parseAsInt(value, typeof defaultValue === "number" ? defaultValue : 0);
-}
-
-function serializeDate(value: any): any {
-    if (value instanceof Date) return value.toISOString();
-    const parsed = parseAsDate(value, new Date(0));
-    if (parsed instanceof Date) return parsed.toISOString();
-    return typeof value === "string" ? value : "";
-}
-
-function serializeType(value: any, type: any, defaultValue: any): any {
-    if (type === parseType.STRING) return serializeString(value, defaultValue);
-    if (type === parseType.FLOAT) return serializeFloat(value, defaultValue);
-    if (type === parseType.INT) return serializeInt(value, defaultValue);
-    if (type === parseType.DATE) return serializeDate(value);
-    if (type === parseType.BOOLEAN) {
-        return parseAsBoolean(value, typeof defaultValue === "boolean" ? defaultValue : false);
-    }
-    return "";
-}
-
-function parseField(rawJson: any, key: any, type: any, defaultValue: any): any {
-    const valueToParse = resolveValue(rawJson, key, defaultValue);
-
-    if (type === parseType.STRING) return parseAsString(valueToParse, defaultValue);
-    if (type === parseType.FLOAT) return parseAsFloat(valueToParse, defaultValue);
-    if (type === parseType.INT) return parseAsInt(valueToParse, defaultValue);
-    if (type === parseType.BOOLEAN) return parseAsBoolean(valueToParse, defaultValue);
-    if (type === parseType.DATE) return parseAsDate(valueToParse, defaultValue);
-
-    return "";
 }

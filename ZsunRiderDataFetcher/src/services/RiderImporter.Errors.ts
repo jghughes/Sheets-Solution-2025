@@ -63,3 +63,12 @@ function isValidationError(err: any): boolean {
 function isServerError(err: any): boolean {
     return err instanceof ServerError;
 }
+
+
+export {
+    ValidationError,
+    ServerError,
+    throwServerError,
+    isValidationError,
+    isServerError
+    };

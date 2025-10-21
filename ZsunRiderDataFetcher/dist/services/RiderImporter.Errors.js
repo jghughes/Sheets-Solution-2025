@@ -1,10 +1,15 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ServerError = exports.ValidationError = void 0;
+exports.throwServerError = throwServerError;
+exports.isValidationError = isValidationError;
+exports.isServerError = isServerError;
 class ValidationError extends Error {
     constructor(code, message, context) {
         super(message);
         this.name = "ValidationError";
-        this.code = code || "validation";
-        this.context = context !== undefined ? context : null;
+        this.code = code;
+        this.context = context;
         Object.setPrototypeOf(this, ValidationError.prototype);
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, ValidationError);
@@ -20,6 +25,7 @@ class ValidationError extends Error {
         };
     }
 }
+exports.ValidationError = ValidationError;
 class ServerError extends Error {
     constructor(code, message, context) {
         super(message);
@@ -41,6 +47,7 @@ class ServerError extends Error {
         };
     }
 }
+exports.ServerError = ServerError;
 function throwServerError(code, message, context) {
     throw new ServerError(code, message, context);
 }

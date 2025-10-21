@@ -32,10 +32,7 @@ declare function importRidersFromUrl(url: any): {
     message: any;
     details: any;
 };
-/**
- * refreshRiderData - orchestrates fetch -> validate -> write.
- */
-declare function refreshRiderData(fetchFunction: any, successMessage?: null, operationName?: string, sheetName?: string): {
+declare function refreshRiderData(fetchFunction: any, successMessage?: null, operationName?: string): {
     ok: boolean;
     message: string;
     reason?: never;
@@ -46,8 +43,5 @@ declare function refreshRiderData(fetchFunction: any, successMessage?: null, ope
     message: any;
     details: any;
 };
-/**
- * processFileContentsAndWriteSheets - parse JSON dictionary and write three sheets
- */
 declare function processFileContentsAndWriteSheets(jsonText: any, sourceLabel: any): string;
 //# sourceMappingURL=RiderImporter.Core.d.ts.map

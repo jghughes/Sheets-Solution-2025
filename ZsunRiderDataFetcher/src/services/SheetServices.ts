@@ -1,4 +1,4 @@
-function showToast(message: string, title: string, timeoutSeconds: number): void {
+export function showToast(message: string, title: string, timeoutSeconds: number): void {
     try {
         SpreadsheetApp.getActiveSpreadsheet().toast(message, title || "", timeoutSeconds ?? 3);
     } catch (err) {
@@ -7,7 +7,7 @@ function showToast(message: string, title: string, timeoutSeconds: number): void
     }
 }
 
-function ensureSheetWithHeader(
+export function ensureSheetWithHeader(
     ss: GoogleAppsScript.Spreadsheet.Spreadsheet,
     name: string,
     headerRow: string[]
@@ -30,7 +30,7 @@ function ensureSheetWithHeader(
     return sheet;
 }
 
-function appendLogRow(rowArray: (string | number | boolean | Date)[], sheetName: string, maxRows: number): void {
+export function appendLogRow(rowArray: (string | number | boolean | Date)[], sheetName: string, maxRows: number): void {
     var err;
     try {
         const lockTimeoutMs = 10000;
@@ -100,7 +100,7 @@ function appendLogRow(rowArray: (string | number | boolean | Date)[], sheetName:
     }
 }
 
-function reportError(message: string, operationName: string, err: Error): void {
+export function reportError(message: string, operationName: string, err: Error): void {
     try {
         const composedMessage = `${message || ""}${err && err.message ? ` - ${err.message}` : ""}`;
         const row: (string | Date)[] = [new Date(), "ERROR", operationName || "", composedMessage];
@@ -111,7 +111,7 @@ function reportError(message: string, operationName: string, err: Error): void {
     }
 }
 
-function getSpreadsheetTimeZone(): string {
+export function getSpreadsheetTimeZone(): string {
     try {
         const ss = SpreadsheetApp.getActiveSpreadsheet();
         if (ss) return ss.getSpreadsheetTimeZone() || "Etc/UTC";
@@ -121,7 +121,7 @@ function getSpreadsheetTimeZone(): string {
     return "Etc/UTC";
 }
 
-function formatIsoToSheetTz(isoString: string): string {
+export function formatIsoToSheetTz(isoString: string): string {
     const tz = getSpreadsheetTimeZone();
     const d = new Date(isoString);
     return Utilities.formatDate(d, tz, "yyyy-MM-dd HH:mm:ss");

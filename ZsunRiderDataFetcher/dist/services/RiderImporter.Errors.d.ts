@@ -25,4 +25,5 @@ declare class ServerError extends Error {
 declare function throwServerError(code: string, message: string, context: any): never;
 declare function isValidationError(err: any): boolean;
 declare function isServerError(err: any): boolean;
+export { ValidationError, ServerError, throwServerError, isValidationError, isServerError };
 //# sourceMappingURL=RiderImporter.Errors.d.ts.map

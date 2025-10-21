@@ -1,29 +1,73 @@
 "use strict";
-const parseType = {
-    STRING: "string",
-    FLOAT: "float",
-    INT: "int",
-    BOOLEAN: "boolean",
-    DATE: "date"
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseType = void 0;
+exports.parseField = parseField;
+exports.getJsonFieldValueByFieldAliases = getJsonFieldValueByFieldAliases;
+exports.parseAsString = parseAsString;
+exports.parseAsFloat = parseAsFloat;
+exports.parseAsInt = parseAsInt;
+exports.parseAsBoolean = parseAsBoolean;
+exports.fromDotNetTicks = fromDotNetTicks;
+exports.numericToDate = numericToDate;
+exports.parseAsDate = parseAsDate;
+exports.parseType = {
+    stringType: "string",
+    floatType: "float",
+    intType: "int",
+    booleanType: "boolean",
+    dateType: "date"
 };
-function resolveValue(rawJson, key, defaultValue) {
+/**
+ * Parses a field from a JSON object using an array of possible field aliases.
+ *
+ * @param rawJson - The JSON object to extract the value from.
+ * @param fieldAliases - An array of strings representing possible property names (aliases).
+ * @param type - The expected type of the value.
+ * @param defaultValue - The value to return if no valid property is found.
+ * @returns The parsed value, or `defaultValue` if not found or invalid.
+ */
+function parseField(rawJson, fieldAliases, type, defaultValue) {
+    const valueToParse = getJsonFieldValueByFieldAliases(rawJson, fieldAliases, defaultValue);
+    if (type === exports.parseType.stringType)
+        return parseAsString(valueToParse, defaultValue);
+    if (type === exports.parseType.floatType)
+        return parseAsFloat(valueToParse, defaultValue);
+    if (type === exports.parseType.intType)
+        return parseAsInt(valueToParse, defaultValue);
+    if (type === exports.parseType.booleanType)
+        return parseAsBoolean(valueToParse, defaultValue);
+    if (type === exports.parseType.dateType)
+        return parseAsDate(valueToParse, defaultValue);
+    // Unknown type, return null
+    return null;
+}
+/**
+ * Safely retrieves a value from a JSON object using one or more possible
+ * field aliases for the underlying property.
+ *
+ * - Checks each alias in the array in order and returns the first valid value found.
+ * - If no valid value is found, returns `defaultValue`.
+ *
+ * @param rawJson - The object to extract the value from.
+ * @param fieldAliases - An array of strings representing possible property names (aliases).
+ * @param defaultValue - The value to return if no valid property is found.
+ * @returns The extracted value, or `defaultValue` if not found or invalid.
+ *
+ * @example
+ * const json = { user_id: 42, name: "Alice" };
+ * const value = getJsonFieldValueByFieldAliases(json, ["userid", "user_id", "id"], 0);
+ * // value === 42
+ */
+function getJsonFieldValueByFieldAliases(rawJson, fieldAliases, defaultValue) {
     if (!rawJson || typeof rawJson !== "object")
         return defaultValue;
-    if (Array.isArray(key)) {
-        for (let i = 0; i < key.length; i++) {
-            const k = key[i];
-            if (Object.prototype.hasOwnProperty.call(rawJson, k)) {
-                const v = rawJson[k];
-                if (v !== "" && v !== null && v !== undefined)
-                    return v;
-            }
+    for (let i = 0; i < fieldAliases.length; i++) {
+        const k = fieldAliases[i];
+        if (Object.prototype.hasOwnProperty.call(rawJson, k)) {
+            const v = rawJson[k];
+            if (v !== "" && v !== null && v !== undefined)
+                return v;
         }
-        return defaultValue;
-    }
-    if (Object.prototype.hasOwnProperty.call(rawJson, key)) {
-        const v = rawJson[key];
-        if (v !== "" && v !== null && v !== undefined)
-            return v;
     }
     return defaultValue;
 }
@@ -104,7 +148,7 @@ function parseAsDate(value, defaultValue) {
     if (!defaultValue || !(defaultValue instanceof Date)) {
         defaultValue = new Date(0);
     }
-    const trimmed = value.trim();
+    const trimmed = typeof value === "string" ? value.trim() : "";
     if (trimmed === "") {
         return defaultValue;
     }
@@ -139,58 +183,5 @@ function parseAsDate(value, defaultValue) {
         return new Date(parsedFallback);
     }
     return defaultValue;
-}
-function serializeString(value, defaultValue) {
-    return parseAsString(value, defaultValue);
-}
-function serializeFloat(value, defaultValue) {
-    if (typeof value === "number")
-        return value;
-    if (value === "")
-        return typeof defaultValue === "number" ? defaultValue : 0;
-    return parseAsFloat(value, typeof defaultValue === "number" ? defaultValue : 0);
-}
-function serializeInt(value, defaultValue) {
-    if (typeof value === "number")
-        return value;
-    if (value === "")
-        return typeof defaultValue === "number" ? defaultValue : 0;
-    return parseAsInt(value, typeof defaultValue === "number" ? defaultValue : 0);
-}
-function serializeDate(value) {
-    if (value instanceof Date)
-        return value.toISOString();
-    const parsed = parseAsDate(value, new Date(0));
-    if (parsed instanceof Date)
-        return parsed.toISOString();
-    return typeof value === "string" ? value : "";
-}
-function serializeType(value, type, defaultValue) {
-    if (type === parseType.STRING)
-        return serializeString(value, defaultValue);
-    if (type === parseType.FLOAT)
-        return serializeFloat(value, defaultValue);
-    if (type === parseType.INT)
-        return serializeInt(value, defaultValue);
-    if (type === parseType.DATE)
-        return serializeDate(value);
-    if (type === parseType.BOOLEAN) {
-        return parseAsBoolean(value, typeof defaultValue === "boolean" ? defaultValue : false);
-    }
-    return "";
-}
-function parseField(rawJson, key, type, defaultValue) {
-    const valueToParse = resolveValue(rawJson, key, defaultValue);
-    if (type === parseType.STRING)
-        return parseAsString(valueToParse, defaultValue);
-    if (type === parseType.FLOAT)
-        return parseAsFloat(valueToParse, defaultValue);
-    if (type === parseType.INT)
-        return parseAsInt(valueToParse, defaultValue);
-    if (type === parseType.BOOLEAN)
-        return parseAsBoolean(valueToParse, defaultValue);
-    if (type === parseType.DATE)
-        return parseAsDate(valueToParse, defaultValue);
-    return "";
 }
 //# sourceMappingURL=ParsersAndSerializers.js.map

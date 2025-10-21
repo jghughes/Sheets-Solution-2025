@@ -1,7 +1,7 @@
 "use strict";
 function showToast(message, title, timeoutSeconds) {
     try {
-        SpreadsheetApp.getActiveSpreadsheet().toast(message, title || "", timeoutSeconds ?? 3);
+        SpreadsheetApp.getActiveSpreadsheet().toast(message, title || "", timeoutSeconds !== null && timeoutSeconds !== void 0 ? timeoutSeconds : 3);
     }
     catch (err) {
         // fallback for non-GAS environment or tests
@@ -28,6 +28,7 @@ function ensureSheetWithHeader(ss, name, headerRow) {
     return sheet;
 }
 function appendLogRow(rowArray, sheetName, maxRows) {
+    var err;
     try {
         const lockTimeoutMs = 10000;
         const lock = LockService.getScriptLock();
@@ -39,9 +40,10 @@ function appendLogRow(rowArray, sheetName, maxRows) {
                 return;
             }
             const name = sheetName || "ErrorLog";
-            const header = ["Timestamp", "Level", "Operation", "Message", "Stack", "User", "Context"];
+            const header = ["Timestamp", "Level", "Operation", "Message"];
             const sheet = ensureSheetWithHeader(ss, name, header);
-            const row = Array.isArray(rowArray) ? rowArray.slice() : [rowArray];
+            // rowArray is always an array, so just copy it
+            const row = [...rowArray];
             if (!row[0])
                 row[0] = new Date();
             for (let i = 0; i < header.length; i++) {
@@ -81,84 +83,29 @@ function appendLogRow(rowArray, sheetName, maxRows) {
                         sheet.deleteRows(startDeleteRow, rowsToDelete);
                     }
                     catch (err) {
-                        try {
-                            Logger.log(`appendLogRow prune failed: ${err && err.message}`);
-                        }
-                        catch (err) {
-                            console.log("appendLogRow prune failed:", err.message);
-                        }
+                        Logger.log(`appendLogRow prune failed: ${err && err.message}`);
                     }
                 }
             }
         }
         finally {
-            try {
-                lock.releaseLock();
-            }
-            catch (err) { }
+            lock.releaseLock();
         }
     }
     catch (err) {
-        try {
-            Logger.log(`appendLogRow failed: ${(err && err.message)} -- row=${JSON.stringify(rowArray)}`);
-        }
-        catch (err) {
-            console.log("appendLogRow fallback:", err.message, rowArray);
-        }
+        Logger.log(`appendLogRow failed: ${(err && err.message)} -- row=${JSON.stringify(rowArray)}`);
     }
 }
-function reportError(message, operationName, err, optContext) {
+function reportError(message, operationName, err) {
     try {
-        let stack = "";
-        let errString = "";
-        try {
-            if (err && err.stack)
-                stack = err.stack;
-            errString = (err && err.message) ? err.message : (err ? String(err) : "");
-        }
-        catch (err) {
-            errString = String(err);
-        }
-        const user = safeGetUserEmail();
-        let contextStr = "";
-        if (optContext !== undefined) {
-            try {
-                contextStr = (typeof optContext === "object") ? JSON.stringify(optContext) : String(optContext);
-            }
-            catch (err) {
-                contextStr = String(optContext);
-            }
-        }
-        const composedMessage = `${message || ""}${errString ? " - " + errString : ""}`;
-        const row = [new Date(), "ERROR", operationName || "", composedMessage, stack, user || "", contextStr || ""];
+        const composedMessage = `${message || ""}${err && err.message ? ` - ${err.message}` : ""}`;
+        const row = [new Date(), "ERROR", operationName || "", composedMessage];
         appendLogRow(row, "ErrorLog", 1000);
-        try {
-            Logger.log(`${operationName || ""}: ${composedMessage}`);
-        }
-        catch (err) {
-            console.log("reportError logger:", err.message);
-        }
+        Logger.log(`${operationName || ""}: ${composedMessage}`);
     }
     catch (err) {
-        try {
-            console.error("reportError:", message, err);
-        }
-        catch (err) { }
+        Logger.log(`reportError failed: ${message} - ${err}`);
     }
-}
-function safeGetUserEmail() {
-    try {
-        if (typeof Session !== "undefined" && Session.getActiveUser) {
-            const u = Session.getActiveUser();
-            if (u && typeof u.getEmail === "function") {
-                return u.getEmail() || "";
-            }
-        }
-    }
-    catch (err) {
-        // ignore permission/privacy errors
-    }
-    return "";
 }
 function getSpreadsheetTimeZone() {
     try {

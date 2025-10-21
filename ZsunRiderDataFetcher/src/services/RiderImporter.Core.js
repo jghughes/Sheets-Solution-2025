@@ -1,4 +1,18 @@
-function showHelpDocument() {
+import {
+    fetchPlainTextFileFromMyDrive,
+    fetchPlainTextFileFromSharedLinkToGoogleDrive,
+    fetchPlainTextFileFromUrl,
+    hasInternetConnection,
+} from "./RiderImporter.Fetchers";
+
+import {
+    ServerError,
+    ValidationError,
+    isValidationError,
+    isServerError
+} from "./RiderImporter.Errors";
+
+export function showHelpDocument() {
     try {
         const html = HtmlService.createHtmlOutputFromFile("src/ui/Help")
             .setWidth(760)
@@ -9,7 +23,7 @@ function showHelpDocument() {
     }
 }
 
-function importRidersFromMyDrive(filename) {
+export function importRidersFromMyDrive(filename) {
     return refreshRiderData(
         () => fetchPlainTextFileFromMyDrive(filename, "MyDriveFetch"),
         "Rider data loaded and validated from Google MyDrive.",
@@ -18,7 +32,7 @@ function importRidersFromMyDrive(filename) {
     );
 }
 
-function importRidersFromGoogleDriveLink(link) {
+export function importRidersFromGoogleDriveLink(link) {
     return refreshRiderData(
         () => fetchPlainTextFileFromSharedLinkToGoogleDrive(link, "GoogleDriveFetch"),
         "Rider data loaded and validated from specified Google Drive.",
@@ -27,7 +41,7 @@ function importRidersFromGoogleDriveLink(link) {
     );
 }
 
-function importRidersFromUrl(url) {
+export function importRidersFromUrl(url) {
     return refreshRiderData(
         () => fetchPlainTextFileFromUrl(url, "HttpFetch"),
         "Rider data loaded and validated from specified URL.",
@@ -36,10 +50,7 @@ function importRidersFromUrl(url) {
     );
 }
 
-/**
- * refreshRiderData - orchestrates fetch -> validate -> write.
- */
-function refreshRiderData(fetchFunction, successMessage = null, operationName = "RefreshRiderData", sheetName = "Source") {
+export function refreshRiderData(fetchFunction, successMessage = null, operationName = "RefreshRiderData") {
     if (!hasInternetConnection()) {
         const netErr = new ServerError("no_internet", "No internet connection detected.", null);
         try {
@@ -84,10 +95,7 @@ function refreshRiderData(fetchFunction, successMessage = null, operationName = 
     }
 }
 
-/**
- * processFileContentsAndWriteSheets - parse JSON dictionary and write three sheets
- */
-function processFileContentsAndWriteSheets(jsonText, sourceLabel) {
+export function processFileContentsAndWriteSheets(jsonText, sourceLabel) {
     if (!jsonText || typeof jsonText !== "string") {
         throw new ValidationError("empty_json", `Empty or invalid JSON text from ${sourceLabel}`);
     }

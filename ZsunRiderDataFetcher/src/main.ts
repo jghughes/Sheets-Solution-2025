@@ -1,5 +1,5 @@
 /**
- * Handles the install event for the add-on.
+ * Handles the onInstall event for the add-on.
  * @param e The Google Sheets onOpen event object.
  */
 function onInstall(): void {

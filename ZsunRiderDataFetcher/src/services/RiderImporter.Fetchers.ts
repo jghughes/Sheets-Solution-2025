@@ -1,41 +1,46 @@
-// Sheets01 / src / services / RidersImporter.Fetchers.js
-// Network / Drive fetch helpers and connection strings
-// Modernized for Apps Script V8 (ES6+) style
+import {
+    ValidationError,
+    ServerError,
+    throwServerError,
+    isValidationError,
+    isServerError
+} from "./RiderImporter.Errors";
+import RemoteHelpers = require("../utils/RemoteHelpers");
 
-const personalGoogleDriveRidersFilename = "everyone_in_club_ZsunItems_2025_09_22_modern.json";
-const publicGoogleDriveRidersFileLink = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
-const azureBlobRidersFileUrl = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
+export const personalGoogleDriveRidersFilename = "everyone_in_club_ZsunItems_2025_09_22_modern.json";
+export const publicGoogleDriveRidersFileLink = "https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing";
+export const azureBlobRidersFileUrl = "https://<your-storage-account>.blob.core.windows.net/<container>/<filename>.json";
 
-/**
- * hasInternetConnection - minimal, dependency-injectable check
- */
-const hasInternetConnection = (fetchImpl = (typeof UrlFetchApp !== "undefined" ? UrlFetchApp : null)) => {
+type FetchImpl = { fetch: (url: string, options?: any) => any } | ((url: string, options?: any) => any) | null;
+type DriveAppType = {
+    getFilesByName: (filename: string) => any;
+    getFileById: (id: string) => any;
+} | null;
+
+export function hasInternetConnection(fetchImpl: FetchImpl = (typeof UrlFetchApp !== "undefined" ? UrlFetchApp : null)): boolean {
     const fetcher = fetchImpl;
     if (!fetcher) return false;
 
     try {
-        const resp = (typeof fetcher.fetch === "function")
-            ? fetcher.fetch("https://www.google.com", { muteHttpExceptions: true })
-            : fetcher("https://www.google.com");
+        const resp = (typeof (fetcher as any).fetch === "function")
+            ? (fetcher as any).fetch("https://www.google.com", { muteHttpExceptions: true })
+            : (fetcher as any)("https://www.google.com");
 
         const code = resp?.getResponseCode?.();
         if (typeof code === "number") return code < 500;
         return true;
-    } catch (e) {
+    } catch (err) {
         return false;
     }
-};
+}
 
-/**
- * fetchPlainTextFileFromMyDrive - lookup by filename
- */
-const fetchPlainTextFileFromMyDrive = (
-    filename,
-    opName = "MyDriveFetch",
-    driveAppImpl = (typeof DriveApp !== "undefined" ? DriveApp : null)
-) => {
+export function fetchPlainTextFileFromMyDrive(
+    filename: string,
+    opName: string = "MyDriveFetch",
+    driveAppImpl: DriveAppType = (typeof DriveApp !== "undefined" ? DriveApp : null)
+): string {
     const driveApp = driveAppImpl;
-    if (!driveApp) throw new ServerError(`${opName}_unavailable`, `${opName} unavailable: no DriveApp`);
+    if (!driveApp) throw new ServerError(`${opName}_unavailable`, `${opName} unavailable: no DriveApp`, { filename });
 
     try {
         const files = driveApp.getFilesByName(filename);
@@ -44,29 +49,22 @@ const fetchPlainTextFileFromMyDrive = (
         }
         const file = files.next();
         return file.getBlob().getDataAsString();
-    } catch (e) {
-        if (isValidationError(e)) throw e;
-        const msg = e && e.message ? e.message : String(e);
+    } catch (err) {
+        if (isValidationError(err)) throw err;
+        const msg = err && err.message ? err.message : String(err);
         throw new ServerError(`${opName}_failed`, `${opName} failed: ${msg}`, { filename });
     }
-};
+}
 
-/**
- * fetchPlainTextFileFromSharedLinkToGoogleDrive - extract id then fetch
- * Depends on SheetsDataFetcherCore.extractDriveIdFromSharedLink if available.
- */
-const fetchPlainTextFileFromSharedLinkToGoogleDrive = (
-    sharedLink,
-    opName = "GoogleDriveFetch",
-    driveAppImpl = (typeof DriveApp !== "undefined" ? DriveApp : null),
-    coreUtil = (typeof SheetsDataFetcherCore !== "undefined" ? SheetsDataFetcherCore : null)
-) => {
+export function fetchPlainTextFileFromSharedLinkToGoogleDrive(
+    sharedLink: string,
+    opName: string = "GoogleDriveFetch",
+    driveAppImpl: DriveAppType = (typeof DriveApp !== "undefined" ? DriveApp : null)
+): string {
     const driveApp = driveAppImpl;
-    const util = coreUtil;
-    if (!driveApp || !util) throw new ServerError(`${opName}_unavailable`, `${opName} unavailable: missing DriveApp or core util`);
 
     try {
-        const id = util.extractDriveIdFromSharedLink(sharedLink);
+        const id = RemoteHelpers.extractGoogleDriveFileIdFromString(sharedLink);
         if (!id || typeof id !== "string" || !/[-\w]{10,}/.test(id)) {
             throw new ValidationError("invalid_shared_link", "Invalid Google Drive shared link or missing id", { sharedLink });
         }
@@ -81,28 +79,24 @@ const fetchPlainTextFileFromSharedLinkToGoogleDrive = (
             }
             throw new ServerError(`${opName}_failed`, `${opName} failed: ${msg}`, { sharedLink, id });
         }
-    } catch (e) {
-        if (isValidationError(e)) throw e;
-        const msg = e && e.message ? e.message : String(e);
+    } catch (err) {
+        if (isValidationError(err)) throw err;
+        const msg = err && err.message ? err.message : String(err);
         throw new ServerError(`${opName}_failed`, `${opName} failed: ${msg}`, { sharedLink });
     }
-};
+}
 
-/**
- * fetchPlainTextFileFromUrl - HTTP(S) fetch with classification of 4xx vs 5xx
- */
-const fetchPlainTextFileFromUrl = (
-    url,
-    opName = "HttpFetch",
-    fetchImpl = (typeof UrlFetchApp !== "undefined" ? UrlFetchApp : null)
-) => {
+export function fetchPlainTextFileFromUrl(
+    url: string,
+    opName: string = "HttpFetch",
+    fetchImpl: FetchImpl = (typeof UrlFetchApp !== "undefined" ? UrlFetchApp : null)
+): string {
     const fetcher = fetchImpl;
-    if (!fetcher) throw new ServerError(`${opName}_unavailable`, `${opName} unavailable: no fetch implementation`);
 
     try {
-        const resp = (typeof fetcher.fetch === "function")
-            ? fetcher.fetch(url, { muteHttpExceptions: true })
-            : fetcher(url);
+        const resp = (typeof (fetcher as any).fetch === "function")
+            ? (fetcher as any).fetch(url, { muteHttpExceptions: true })
+            : (fetcher as any)(url);
 
         if (typeof resp === "string") return resp;
 
@@ -127,9 +121,10 @@ const fetchPlainTextFileFromUrl = (
         if (resp && typeof resp.getContentText === "function") return resp.getContentText();
 
         throw new ValidationError("unexpected_fetch_shape", "Unexpected fetch response shape", { url });
-    } catch (e) {
-        if (isValidationError(e)) throw e;
-        const msg = e && e.message ? e.message : String(e);
+    } catch (err) {
+        if (isValidationError(err)) throw err;
+        const msg = err && err.message ? err.message : String(err);
         throw new ServerError(`${opName}_failed`, `${opName} failed: ${msg}`, { url });
     }
-};
+}
+
