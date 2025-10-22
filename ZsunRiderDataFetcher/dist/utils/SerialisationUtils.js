@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseType = void 0;
+exports.parseType = exports.JsonSerializer = void 0;
 exports.parseField = parseField;
 exports.getJsonFieldValueByFieldAliases = getJsonFieldValueByFieldAliases;
 exports.parseAsString = parseAsString;
@@ -10,6 +10,83 @@ exports.parseAsBoolean = parseAsBoolean;
 exports.fromDotNetTicks = fromDotNetTicks;
 exports.numericToDate = numericToDate;
 exports.parseAsDate = parseAsDate;
+const class_transformer_1 = require("class-transformer");
+const ErrorUtils_1 = require("./ErrorUtils");
+const miscellaneousUtils_1 = require("./miscellaneousUtils");
+/**
+ * Utility class for serializing and deserializing DTOs using class-transformer.
+ * Handles single instances, arrays, tuples, and dictionary-like objects.
+ * Throws structured errors with context for easier debugging.
+ */
+class JsonSerializer {
+    /**
+     * Serializes an input model to a JSON string.
+     * Throws ValidationError or ServerError on failure.
+     */
+    static serialize(inputModel) {
+        try {
+            if (inputModel === null || inputModel === undefined) {
+                (0, ErrorUtils_1.throwValidationError)(ErrorUtils_1.validationErrorCode.emptyInput, "Input model is null or undefined.", "JsonSerializer.serialize", "serialize", { inputModel });
+            }
+            const plainObj = (0, class_transformer_1.instanceToPlain)(inputModel, {
+                exposeUnsetFields: true,
+                strategy: "exposeAll",
+                enableCircularCheck: true,
+                excludeExtraneousValues: false
+            });
+            return JSON.stringify(plainObj);
+        }
+        catch (err) {
+            const inputType = inputModel && inputModel.constructor
+                ? inputModel.constructor.name
+                : typeof inputModel;
+            const message = err.message;
+            if ((0, ErrorUtils_1.isValidationError)(err))
+                throw err;
+            (0, ErrorUtils_1.throwServerErrorWithContext)(ErrorUtils_1.serverErrorCode.unexpectedError, `Serialization failed for type <${inputType}>: ${message}`, "JsonSerializer.serialize", "serialize", { inputModel });
+        }
+        // Defensive: should never be reached, but satisfies TypeScript
+        throw new Error("Unreachable code in JsonSerializer.serialize");
+    }
+    /**
+     * Deserializes a JSON string to an instance, array, or dictionary of type T.
+     * Throws ValidationError or ServerError on failure.
+     */
+    static deserialize(inputJson, cls) {
+        try {
+            if (typeof inputJson !== "string" || inputJson.trim() === "") {
+                (0, ErrorUtils_1.throwValidationError)(ErrorUtils_1.validationErrorCode.emptyInput, "Input JSON string is empty or not a string.", "JsonSerializer.deserialize", "deserialize", { inputJson });
+            }
+            const plainObj = JSON.parse(inputJson);
+            if (Array.isArray(plainObj)) {
+                return (0, class_transformer_1.plainToInstance)(cls, plainObj);
+            }
+            else if ((0, miscellaneousUtils_1.isDictionaryOfObjects)(plainObj)) {
+                const result = {};
+                for (const key of Object.keys(plainObj)) {
+                    result[key] = (0, class_transformer_1.plainToInstance)(cls, plainObj[key]);
+                }
+                return result;
+            }
+            else if (plainObj && typeof plainObj === "object") {
+                return (0, class_transformer_1.plainToInstance)(cls, plainObj);
+            }
+            else {
+                (0, ErrorUtils_1.throwValidationError)(ErrorUtils_1.validationErrorCode.invalidFileFormat, "Input JSON is not a valid object, array, or dictionary.", "JsonSerializer.deserialize", "deserialize", { inputJson });
+            }
+        }
+        catch (err) {
+            const inputType = cls && cls.name ? cls.name : "unknown";
+            const message = err.message;
+            if ((0, ErrorUtils_1.isValidationError)(err))
+                throw err;
+            (0, ErrorUtils_1.throwServerErrorWithContext)(ErrorUtils_1.serverErrorCode.unexpectedError, `Deserialization failed for type <${inputType}>: ${message}`, "JsonSerializer.deserialize", "deserialize", { inputJson });
+        }
+        // Defensive: should never be reached, but satisfies TypeScript
+        throw new Error("Unreachable code in JsonSerializer.deserialize");
+    }
+}
+exports.JsonSerializer = JsonSerializer;
 exports.parseType = {
     stringType: "string",
     floatType: "float",
@@ -19,14 +96,12 @@ exports.parseType = {
 };
 /**
  * Parses a field from a JSON object using an array of possible field aliases.
- *
- * @param rawJson - The JSON object to extract the value from.
- * @param fieldAliases - An array of strings representing possible property names (aliases).
- * @param type - The expected type of the value.
- * @param defaultValue - The value to return if no valid property is found.
- * @returns The parsed value, or `defaultValue` if not found or invalid.
+ * Throws ValidationError if input is invalid.
  */
 function parseField(rawJson, fieldAliases, type, defaultValue) {
+    if (!rawJson || typeof rawJson !== "object") {
+        (0, ErrorUtils_1.throwValidationError)(ErrorUtils_1.validationErrorCode.malformedJson, "rawJson is not a valid object.", "parseField", "parseField", { rawJson });
+    }
     const valueToParse = getJsonFieldValueByFieldAliases(rawJson, fieldAliases, defaultValue);
     if (type === exports.parseType.stringType)
         return parseAsString(valueToParse, defaultValue);
@@ -44,23 +119,12 @@ function parseField(rawJson, fieldAliases, type, defaultValue) {
 /**
  * Safely retrieves a value from a JSON object using one or more possible
  * field aliases for the underlying property.
- *
- * - Checks each alias in the array in order and returns the first valid value found.
- * - If no valid value is found, returns `defaultValue`.
- *
- * @param rawJson - The object to extract the value from.
- * @param fieldAliases - An array of strings representing possible property names (aliases).
- * @param defaultValue - The value to return if no valid property is found.
- * @returns The extracted value, or `defaultValue` if not found or invalid.
- *
- * @example
- * const json = { user_id: 42, name: "Alice" };
- * const value = getJsonFieldValueByFieldAliases(json, ["userid", "user_id", "id"], 0);
- * // value === 42
+ * Throws ValidationError if input is invalid.
  */
 function getJsonFieldValueByFieldAliases(rawJson, fieldAliases, defaultValue) {
-    if (!rawJson || typeof rawJson !== "object")
-        return defaultValue;
+    if (!rawJson || typeof rawJson !== "object") {
+        (0, ErrorUtils_1.throwValidationError)(ErrorUtils_1.validationErrorCode.malformedJson, "rawJson is not a valid object.", "getJsonFieldValueByFieldAliases", "getJsonFieldValueByFieldAliases", { rawJson });
+    }
     for (let i = 0; i < fieldAliases.length; i++) {
         const k = fieldAliases[i];
         if (Object.prototype.hasOwnProperty.call(rawJson, k)) {
@@ -71,6 +135,9 @@ function getJsonFieldValueByFieldAliases(rawJson, fieldAliases, defaultValue) {
     }
     return defaultValue;
 }
+/**
+ * Parses a value as a string, returning defaultValue if invalid.
+ */
 function parseAsString(value, defaultValue) {
     if (typeof value !== "string") {
         return typeof defaultValue === "string" ? defaultValue : "";
@@ -78,6 +145,9 @@ function parseAsString(value, defaultValue) {
     const trimmed = value.trim();
     return trimmed !== "" ? trimmed : (typeof defaultValue === "string" ? defaultValue : "");
 }
+/**
+ * Parses a value as a float, returning defaultValue if invalid.
+ */
 function parseAsFloat(value, defaultValue) {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0.0;
@@ -88,6 +158,9 @@ function parseAsFloat(value, defaultValue) {
     const num = Number(value);
     return Number.isFinite(num) ? num : (typeof defaultValue === "number" ? defaultValue : 0.0);
 }
+/**
+ * Parses a value as an integer, returning defaultValue if invalid.
+ */
 function parseAsInt(value, defaultValue) {
     if (typeof value === "object" || typeof value === "boolean") {
         return typeof defaultValue === "number" ? defaultValue : 0;
@@ -98,6 +171,9 @@ function parseAsInt(value, defaultValue) {
     const parsed = parseInt(value, 10);
     return Number.isFinite(parsed) ? parsed : (typeof defaultValue === "number" ? defaultValue : 0);
 }
+/**
+ * Parses a value as a boolean, returning defaultValue if invalid.
+ */
 function parseAsBoolean(value, defaultValue) {
     if (typeof value === "string") {
         const str = value.trim().toLowerCase();
@@ -124,6 +200,10 @@ function parseAsBoolean(value, defaultValue) {
     }
     return typeof defaultValue === "boolean" ? defaultValue : false;
 }
+/**
+ * Converts .NET ticks to a JavaScript Date.
+ * Returns Date(0) if input is invalid.
+ */
 function fromDotNetTicks(ticks) {
     const dotnetTicksAtUnixEpoch = 621355968000000000;
     const num = typeof ticks === "string" ? Number(ticks) : ticks;
@@ -132,9 +212,15 @@ function fromDotNetTicks(ticks) {
     const ms = Math.floor((num - dotnetTicksAtUnixEpoch) / 10000);
     return new Date(ms);
 }
+/**
+ * Converts a numeric value to a JavaScript Date.
+ * Handles Unix timestamps, .NET ticks, and milliseconds.
+ * Returns Date(0) if input is invalid.
+ */
 function numericToDate(n) {
-    if (!Number.isFinite(n))
-        return new Date(0);
+    if (!Number.isFinite(n)) {
+        (0, ErrorUtils_1.throwValidationError)(ErrorUtils_1.validationErrorCode.invalidDate, "Input is not a finite number.", "numericToDate", "numericToDate", { n });
+    }
     const abs = Math.abs(n);
     if (abs > 1e14) {
         return fromDotNetTicks(n);
@@ -144,6 +230,9 @@ function numericToDate(n) {
     }
     return new Date(Math.floor(n));
 }
+/**
+ * Parses a value as a Date, returning defaultValue if invalid.
+ */
 function parseAsDate(value, defaultValue) {
     if (!defaultValue || !(defaultValue instanceof Date)) {
         defaultValue = new Date(0);
@@ -184,4 +273,4 @@ function parseAsDate(value, defaultValue) {
     }
     return defaultValue;
 }
-//# sourceMappingURL=ParsersAndSerializers.js.map
+//# sourceMappingURL=SerialisationUtils.js.map

@@ -1,4 +1,4 @@
-export declare class ZsunDTO {
+export declare class ZSunDto {
     zwift_id: string;
     name: string;
     zwiftracingapp_country_alpha2: string;
@@ -29,4 +29,4 @@ export declare class ZsunDTO {
     zsun_when_curves_fitted: string;
     constructor();
 }
-//# sourceMappingURL=ZsunDTO.d.ts.map
+//# sourceMappingURL=ZSunDTO.d.ts.map

@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ZsunDTO = void 0;
-class ZsunDTO {
+exports.ZSunDto = void 0;
+class ZSunDto {
     constructor() {
         this.zwift_id = "";
         this.name = "";
@@ -34,5 +34,5 @@ class ZsunDTO {
         // All properties are initialized inline above.
     }
 }
-exports.ZsunDTO = ZsunDTO;
-//# sourceMappingURL=ZsunDTO.js.map
+exports.ZSunDto = ZSunDto;
+//# sourceMappingURL=ZSunDTO.js.map

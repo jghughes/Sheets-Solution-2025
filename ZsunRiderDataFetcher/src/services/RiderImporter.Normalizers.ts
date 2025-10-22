@@ -21,39 +21,6 @@ function bestEffortNormalize(raw: RiderRaw, key: string): RiderNormalized {
     return o;
 }
 
-function dictionaryToArray(dict: { [key: string]: string | RiderRaw }): RiderRaw[] {
-    const out: RiderRaw[] = [];
-    for (const [key, rawValue] of Object.entries(dict)) {
-        let raw: RiderRaw;
-        if (typeof rawValue === "string") {
-            const t = rawValue.trim();
-            if (t === "") continue;
-            try {
-                raw = JSON.parse(t);
-            } catch (err) {
-                continue;
-            }
-        } else {
-            raw = rawValue;
-        }
-        if (typeof raw !== "object" || Array.isArray(raw)) continue;
-
-        const entry: RiderRaw = {};
-        for (const [k2, v] of Object.entries(raw)) {
-            entry[k2] = v;
-            try {
-                const camel = snakeToCamel(k2);
-                if (!(camel in entry)) entry[camel] = v;
-            } catch (err) {
-                // ignore
-            }
-        }
-        entry.zwiftId = String(entry.zwiftId || entry.zwift_id || key);
-        out.push(entry);
-    }
-    return out;
-}
-
 declare function deserializeRiderItem(raw: RiderRaw): RiderNormalized;
 declare function riderItem(raw: RiderRaw): RiderNormalized;
 

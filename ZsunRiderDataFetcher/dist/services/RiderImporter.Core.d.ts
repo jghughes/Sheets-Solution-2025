@@ -1,47 +1,30 @@
-declare function showHelpDocument(): void;
-declare function importRidersFromMyDrive(filename: any): {
+import { ZsunDTO } from "../models/ZsunDTO";
+export declare function showHelpDocument(): void;
+export declare function importRidersFromMyDrive(filename: string, driveAppImpl?: any): {
     ok: boolean;
     message: string;
-    reason?: never;
-    details?: never;
-} | {
-    ok: boolean;
-    reason: any;
-    message: any;
-    details: any;
+    reason?: string;
+    details?: any;
 };
-declare function importRidersFromGoogleDriveLink(link: any): {
+export declare function importRidersFromGoogleDriveLink(link: string, driveAppImpl?: any): {
     ok: boolean;
     message: string;
-    reason?: never;
-    details?: never;
-} | {
-    ok: boolean;
-    reason: any;
-    message: any;
-    details: any;
+    reason?: string;
+    details?: any;
 };
-declare function importRidersFromUrl(url: any): {
+export declare function importRidersFromUrl(url: string, fetchImpl?: any): {
     ok: boolean;
     message: string;
-    reason?: never;
-    details?: never;
-} | {
-    ok: boolean;
-    reason: any;
-    message: any;
-    details: any;
+    reason?: string;
+    details?: any;
 };
-declare function refreshRiderData(fetchFunction: any, successMessage?: null, operationName?: string): {
+export declare function refreshRiderData(fetchFunction: () => string, successMessage?: string | null, operationName?: string): {
     ok: boolean;
     message: string;
-    reason?: never;
-    details?: never;
-} | {
-    ok: boolean;
-    reason: any;
-    message: any;
-    details: any;
+    reason?: string;
+    details?: any;
 };
-declare function processFileContentsAndWriteSheets(jsonText: any, sourceLabel: any): string;
+export declare function processFileContentsAndWriteSheets(jsonText: string, sourceLabel: string): {
+    [key: string]: ZsunDTO;
+};
 //# sourceMappingURL=RiderImporter.Core.d.ts.map

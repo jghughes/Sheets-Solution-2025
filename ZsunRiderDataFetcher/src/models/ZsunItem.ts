@@ -1,108 +1,108 @@
-import { ZsunDTO } from "./ZsunDTO";
+import { ZSunDto } from "./ZSunDTO";
 
-export class ZsunItem {
-    zwift_id: string = "";
-    name: string = "";
-    zwiftracingapp_country_alpha2: string = "";
-    weight_kg: number = 0.0;
-    height_cm: number = 0.0;
-    gender: string = "";
-    age_years: number = 0.0;
-    age_group: string = "";
-    zwift_ftp_watts: number = 0.0;
-    zwiftpower_zFTP_watts: number = 0.0;
-    zwiftracingapp_zpFTP_watts: number = 0.0;
-    zsun_one_hour_watts: number = 0.0;
-    zsun_CP_watts: number = 0.0;
-    zsun_AWC_kJ: number = 0.0;
-    zwift_zrs_score: number = 0.0;
-    zwift_cat_open: string = "";
-    zwift_cat_female: string = "";
-    zwiftracingapp_velo_rating_30_days: number = 0.0;
-    zwiftracingapp_cat_num_30_days: number = 0;
-    zwiftracingapp_cat_name_30_days: string = "";
-    zwiftracingapp_CP_watts: number = 0.0;
-    zwiftracingapp_AWC_kJ: number = 0.0;
-    zsun_one_hour_curve_coefficient: number = 0.0;
-    zsun_one_hour_curve_exponent: number = 0.0;
-    zsun_TTT_pull_curve_coefficient: number = 0.0;
-    zsun_TTT_pull_curve_exponent: number = 0.0;
-    zsun_TTT_pull_curve_fit_r_squared: number = 0.0;
-    zsun_when_curves_fitted: string = "";
+export class ZSunItem {
+    zwiftId = "";
+    name = "";
+    zwiftRacingAppCountryAlpha2 = "";
+    weightKg = 0.0;
+    heightCm = 0.0;
+    gender = "";
+    ageYears = 0.0;
+    ageGroup = "";
+    zwiftFtpWatts = 0.0;
+    zwiftPowerZFtpWatts = 0.0;
+    zwiftRacingAppZpFtpWatts = 0.0;
+    jghOneHourWatts = 0.0;
+    jghCpWatts = 0.0;
+    jghAwcKj = 0.0;
+    zwiftZrsScore = 0.0;
+    zwiftCatOpen = "";
+    zwiftCatFemale = "";
+    zwiftRacingAppRating30Days = 0.0;
+    zwiftRacingAppCatNum30Days = 0;
+    zwiftRacingAppCatName30Days = "";
+    zwiftRacingAppCpWatts = 0.0;
+    zwiftRacingAppAwcKj = 0.0;
+    jghOneHourCurveCoefficient = 0.0;
+    jghOneHourCurveExponent = 0.0;
+    jghTttPullCurveCoefficient = 0.0;
+    jghTttPullCurveExponent = 0.0;
+    jghTttPullCurveFitRSquared = 0.0;
+    jghWhenCurvesFitted = "";
 
     constructor() {
         // All properties initialized above
     }
 
-    static to_dataTransferObject(item: ZsunItem | null): ZsunDTO {
+    static toDataTransferObject(item: ZSunItem | null): ZSunDto {
         if (!item) {
-            return new ZsunDTO();
+            return new ZSunDto();
         }
-        const dto = new ZsunDTO();
-        dto.zwift_id = item.zwift_id;
+        const dto = new ZSunDto();
+        dto.zwift_id = item.zwiftId;
         dto.name = item.name;
-        dto.zwiftracingapp_country_alpha2 = item.zwiftracingapp_country_alpha2;
-        dto.weight_kg = item.weight_kg;
-        dto.height_cm = item.height_cm;
+        dto.zwiftracingapp_country_alpha2 = item.zwiftRacingAppCountryAlpha2;
+        dto.weight_kg = item.weightKg;
+        dto.height_cm = item.heightCm;
         dto.gender = item.gender;
-        dto.age_years = item.age_years;
-        dto.age_group = item.age_group;
-        dto.zwift_ftp_watts = item.zwift_ftp_watts;
-        dto.zwiftpower_zFTP_watts = item.zwiftpower_zFTP_watts;
-        dto.zwiftracingapp_zpFTP_watts = item.zwiftracingapp_zpFTP_watts;
-        dto.zsun_one_hour_watts = item.zsun_one_hour_watts;
-        dto.zsun_CP_watts = item.zsun_CP_watts;
-        dto.zsun_AWC_kJ = item.zsun_AWC_kJ;
-        dto.zwift_zrs_score = item.zwift_zrs_score;
-        dto.zwift_cat_open = item.zwift_cat_open;
-        dto.zwift_cat_female = item.zwift_cat_female;
-        dto.zwiftracingapp_velo_rating_30_days = item.zwiftracingapp_velo_rating_30_days;
-        dto.zwiftracingapp_cat_num_30_days = item.zwiftracingapp_cat_num_30_days;
-        dto.zwiftracingapp_cat_name_30_days = item.zwiftracingapp_cat_name_30_days;
-        dto.zwiftracingapp_CP_watts = item.zwiftracingapp_CP_watts;
-        dto.zwiftracingapp_AWC_kJ = item.zwiftracingapp_AWC_kJ;
-        dto.zsun_one_hour_curve_coefficient = item.zsun_one_hour_curve_coefficient;
-        dto.zsun_one_hour_curve_exponent = item.zsun_one_hour_curve_exponent;
-        dto.zsun_TTT_pull_curve_coefficient = item.zsun_TTT_pull_curve_coefficient;
-        dto.zsun_TTT_pull_curve_exponent = item.zsun_TTT_pull_curve_exponent;
-        dto.zsun_TTT_pull_curve_fit_r_squared = item.zsun_TTT_pull_curve_fit_r_squared;
-        dto.zsun_when_curves_fitted = item.zsun_when_curves_fitted;
+        dto.age_years = item.ageYears;
+        dto.age_group = item.ageGroup;
+        dto.zwift_ftp_watts = item.zwiftFtpWatts;
+        dto.zwiftpower_zFTP_watts = item.zwiftPowerZFtpWatts;
+        dto.zwiftracingapp_zpFTP_watts = item.zwiftRacingAppZpFtpWatts;
+        dto.zsun_one_hour_watts = item.jghOneHourWatts;
+        dto.zsun_CP_watts = item.jghCpWatts;
+        dto.zsun_AWC_kJ = item.jghAwcKj;
+        dto.zwift_zrs_score = item.zwiftZrsScore;
+        dto.zwift_cat_open = item.zwiftCatOpen;
+        dto.zwift_cat_female = item.zwiftCatFemale;
+        dto.zwiftracingapp_velo_rating_30_days = item.zwiftRacingAppRating30Days;
+        dto.zwiftracingapp_cat_num_30_days = item.zwiftRacingAppCatNum30Days;
+        dto.zwiftracingapp_cat_name_30_days = item.zwiftRacingAppCatName30Days;
+        dto.zwiftracingapp_CP_watts = item.zwiftRacingAppCpWatts;
+        dto.zwiftracingapp_AWC_kJ = item.zwiftRacingAppAwcKj;
+        dto.zsun_one_hour_curve_coefficient = item.jghOneHourCurveCoefficient;
+        dto.zsun_one_hour_curve_exponent = item.jghOneHourCurveExponent;
+        dto.zsun_TTT_pull_curve_coefficient = item.jghTttPullCurveCoefficient;
+        dto.zsun_TTT_pull_curve_exponent = item.jghTttPullCurveExponent;
+        dto.zsun_TTT_pull_curve_fit_r_squared = item.jghTttPullCurveFitRSquared;
+        dto.zsun_when_curves_fitted = item.jghWhenCurvesFitted;
         return dto;
     }
 
-    static from_dataTransferObject(dto: ZsunDTO | null): ZsunItem {
-        const item = new ZsunItem();
+    static fromDataTransferObject(dto: ZSunDto | null): ZSunItem {
+        const item = new ZSunItem();
         if (!dto) {
             return item;
         }
-        item.zwift_id = dto.zwift_id || "";
+        item.zwiftId = dto.zwift_id || "";
         item.name = dto.name || "";
-        item.zwiftracingapp_country_alpha2 = dto.zwiftracingapp_country_alpha2 || "";
-        item.weight_kg = dto.weight_kg || 0.0;
-        item.height_cm = dto.height_cm || 0.0;
+        item.zwiftRacingAppCountryAlpha2 = dto.zwiftracingapp_country_alpha2 || "";
+        item.weightKg = dto.weight_kg || 0.0;
+        item.heightCm = dto.height_cm || 0.0;
         item.gender = dto.gender || "";
-        item.age_years = dto.age_years || 0.0;
-        item.age_group = dto.age_group || "";
-        item.zwift_ftp_watts = dto.zwift_ftp_watts || 0.0;
-        item.zwiftpower_zFTP_watts = dto.zwiftpower_zFTP_watts || 0.0;
-        item.zwiftracingapp_zpFTP_watts = dto.zwiftracingapp_zpFTP_watts || 0.0;
-        item.zsun_one_hour_watts = dto.zsun_one_hour_watts || 0.0;
-        item.zsun_CP_watts = dto.zsun_CP_watts || 0.0;
-        item.zsun_AWC_kJ = dto.zsun_AWC_kJ || 0.0;
-        item.zwift_zrs_score = dto.zwift_zrs_score || 0.0;
-        item.zwift_cat_open = dto.zwift_cat_open || "";
-        item.zwift_cat_female = dto.zwift_cat_female || "";
-        item.zwiftracingapp_velo_rating_30_days = dto.zwiftracingapp_velo_rating_30_days || 0.0;
-        item.zwiftracingapp_cat_num_30_days = dto.zwiftracingapp_cat_num_30_days || 0;
-        item.zwiftracingapp_cat_name_30_days = dto.zwiftracingapp_cat_name_30_days || "";
-        item.zwiftracingapp_CP_watts = dto.zwiftracingapp_CP_watts || 0.0;
-        item.zwiftracingapp_AWC_kJ = dto.zwiftracingapp_AWC_kJ || 0.0;
-        item.zsun_one_hour_curve_coefficient = dto.zsun_one_hour_curve_coefficient || 0.0;
-        item.zsun_one_hour_curve_exponent = dto.zsun_one_hour_curve_exponent || 0.0;
-        item.zsun_TTT_pull_curve_coefficient = dto.zsun_TTT_pull_curve_coefficient || 0.0;
-        item.zsun_TTT_pull_curve_exponent = dto.zsun_TTT_pull_curve_exponent || 0.0;
-        item.zsun_TTT_pull_curve_fit_r_squared = dto.zsun_TTT_pull_curve_fit_r_squared || 0.0;
-        item.zsun_when_curves_fitted = dto.zsun_when_curves_fitted || "";
+        item.ageYears = dto.age_years || 0.0;
+        item.ageGroup = dto.age_group || "";
+        item.zwiftFtpWatts = dto.zwift_ftp_watts || 0.0;
+        item.zwiftPowerZFtpWatts = dto.zwiftpower_zFTP_watts || 0.0;
+        item.zwiftRacingAppZpFtpWatts = dto.zwiftracingapp_zpFTP_watts || 0.0;
+        item.jghOneHourWatts = dto.zsun_one_hour_watts || 0.0;
+        item.jghCpWatts = dto.zsun_CP_watts || 0.0;
+        item.jghAwcKj = dto.zsun_AWC_kJ || 0.0;
+        item.zwiftZrsScore = dto.zwift_zrs_score || 0.0;
+        item.zwiftCatOpen = dto.zwift_cat_open || "";
+        item.zwiftCatFemale = dto.zwift_cat_female || "";
+        item.zwiftRacingAppRating30Days = dto.zwiftracingapp_velo_rating_30_days || 0.0;
+        item.zwiftRacingAppCatNum30Days = dto.zwiftracingapp_cat_num_30_days || 0;
+        item.zwiftRacingAppCatName30Days = dto.zwiftracingapp_cat_name_30_days || "";
+        item.zwiftRacingAppCpWatts = dto.zwiftracingapp_CP_watts || 0.0;
+        item.zwiftRacingAppAwcKj = dto.zwiftracingapp_AWC_kJ || 0.0;
+        item.jghOneHourCurveCoefficient = dto.zsun_one_hour_curve_coefficient || 0.0;
+        item.jghOneHourCurveExponent = dto.zsun_one_hour_curve_exponent || 0.0;
+        item.jghTttPullCurveCoefficient = dto.zsun_TTT_pull_curve_coefficient || 0.0;
+        item.jghTttPullCurveExponent = dto.zsun_TTT_pull_curve_exponent || 0.0;
+        item.jghTttPullCurveFitRSquared = dto.zsun_TTT_pull_curve_fit_r_squared || 0.0;
+        item.jghWhenCurvesFitted = dto.zsun_when_curves_fitted || "";
         return item;
     }
 }

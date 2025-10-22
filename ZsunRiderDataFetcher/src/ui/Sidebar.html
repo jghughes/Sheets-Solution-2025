@@ -27,6 +27,33 @@
             border-radius: 4px;
         }
 
+        .input-error {
+            border: 2px solid #b00020 !important;
+            animation: shake 0.2s 2;
+        }
+
+        @keyframes shake {
+            0% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-4px);
+            }
+
+            50% {
+                transform: translateX(4px);
+            }
+
+            75% {
+                transform: translateX(-4px);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
         button {
             padding: 10px;
             font-size: 14px;
@@ -59,7 +86,6 @@
             color: #666;
         }
 
-        /* Status area styles */
         .status {
             display: flex;
             align-items: center;
@@ -70,14 +96,12 @@
             background: transparent;
         }
 
-        /* Short summary (clamped to 3 lines) */
         .status__text {
             flex: 1;
             font-size: 12px;
             white-space: normal;
             overflow-wrap: anywhere;
             word-break: break-word;
-            /* Clamp to 3 lines, show ellipsis where supported */
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
@@ -119,7 +143,6 @@
             background: rgba(46, 125, 50, 0.04);
         }
 
-        /* Details panel */
         .status__details {
             margin-top: 8px;
             padding: 8px;
@@ -152,7 +175,6 @@
                 justify-content: flex-end;
             }
 
-        /* Spinner */
         .spinner {
             width: 18px;
             height: 18px;
@@ -173,7 +195,6 @@
             border-top-color: #fff;
         }
 
-        /* For secondary-button spinner contrast */
         button.secondary .spinner {
             border-top-color: #1a237e;
         }
@@ -184,7 +205,6 @@
             }
         }
 
-        /* compact control group */
         .controls {
             display: flex;
             gap: 8px;
@@ -197,8 +217,8 @@
 
     <div class="row">
         <select id="method" aria-label="Input method">
-            <option value="mydrive">My Drive (filename)</option>
-            <option value="gdrive">Google Drive link</option>
+            <option value="myDrive">My Drive (filename)</option>
+            <option value="gDrive">Google Drive link</option>
             <option value="url">URL (http/https)</option>
         </select>
     </div>
@@ -213,13 +233,11 @@
         <button id="closeBtn" class="secondary" aria-label="Close sidebar">Close</button>
     </div>
 
-    <!-- status: aria-live for screen readers, visual dismiss button -->
     <div id="status" class="small note status" aria-live="polite">
         <span class="status__text" id="statusText"></span>
         <button id="statusDetailsLink" class="status__detailsLink" aria-expanded="false">Details</button>
         <button id="statusClose" class="status__close" aria-label="Dismiss status">x</button>
-
-        <!-- Details panel (hidden by default) -->
+        <button id="retryBtn" style="display:none;">Retry</button>
         <div id="statusDetails" class="status__details" role="region" aria-label="Status details">
             <pre id="statusDetailsText" tabindex="0"></pre>
             <div class="actions">
@@ -231,8 +249,8 @@
 
     <script>
         (function () {
-            const LS_METHOD = 'ws_last_method';
-            const LS_TARGET = 'ws_last_target';
+            const lsMethod = 'ws_last_method';
+            const lsTarget = 'ws_last_target';
 
             const methodEl = document.getElementById('method');
             const inputEl = document.getElementById('targetInput');
@@ -244,36 +262,32 @@
             const statusDetailsText = document.getElementById('statusDetailsText');
             const copyDetailsBtn = document.getElementById('copyDetailsBtn');
             const closeDetailsBtn = document.getElementById('closeDetailsBtn');
+            const retryBtn = document.getElementById('retryBtn');
 
             const refreshBtn = document.getElementById('refreshBtn');
             const helpBtn = document.getElementById('helpBtn');
             const closeBtn = document.getElementById('closeBtn');
             const spinnerEl = document.getElementById('refreshSpinner');
 
-            // Client-side logging helpers (masking + sampling)
-            const CLIENT_LOG_SAMPLE_RATE = 0.25; // 25% sampling by default
-            const _clientLogSeen = new Set();    // dedupe per session
+            const clientLogSampleRate = 0.25;
+            const clientLogSeen = new Set();
 
-            function generateCorrelationId() {
-                // short base36 id
-                return Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);
-            }
+            let busyCount = 0;
+            let lastMethod = '';
+            let lastValue = '';
 
             function maskForLogging(method, value) {
                 if (!value) return "";
                 try {
                     const v = value.trim();
                     if (method === 'url') {
-                        // Keep scheme only, redact the rest to avoid leaking paths/queries
                         return v.replace(/^(https?:\/\/)(.*)$/, '$1[REDACTED]');
                     }
-                    if (method === 'gdrive') {
-                        // Try to extract a Drive ID and return only the ID (or redact)
+                    if (method === 'gDrive') {
                         const m = v.match(/\/d\/([-\w]{10,})/) || v.match(/[?&]id=([-\w]{10,})/) || v.match(/([-\w]{25,})/);
                         return m && m[1] ? m[1] : '[REDACTED_DRIVE]';
                     }
-                    if (method === 'mydrive') {
-                        // Truncate long filenames
+                    if (method === 'myDrive') {
                         if (v.length > 120) return v.slice(0, 120) + '...';
                         return v;
                     }
@@ -284,26 +298,21 @@
             }
 
             function fingerprintForLogging(operation, message, maskedTarget) {
-                // simple fingerprint: operation + message summary + target
                 const m = (message || '').replace(/\s+/g, ' ').slice(0, 200);
                 return operation + '|' + m + '|' + (maskedTarget || '');
             }
 
             function shouldLogClientError(fingerprint) {
-                // If we've already logged this fingerprint in this session, skip to reduce noise.
-                if (_clientLogSeen.has(fingerprint)) return false;
-                // Sample new fingerprints with SAMPLE_RATE probability.
+                if (clientLogSeen.has(fingerprint)) return false;
                 const roll = Math.random();
-                if (roll <= CLIENT_LOG_SAMPLE_RATE) {
-                    _clientLogSeen.add(fingerprint);
+                if (roll <= clientLogSampleRate) {
+                    clientLogSeen.add(fingerprint);
                     return true;
                 }
-                // If not sampled, still add to seen set to avoid repeated evaluation in this session.
-                _clientLogSeen.add(fingerprint);
+                clientLogSeen.add(fingerprint);
                 return false;
             }
 
-            let busyCount = 0;
             function setBusy(on) {
                 if (on) busyCount++; else busyCount = Math.max(0, busyCount - 1);
                 const isBusy = busyCount > 0;
@@ -313,46 +322,6 @@
                 spinnerEl.classList.toggle('spinner--visible', isBusy);
             }
 
-            /*
-             Developer guidance - formatting short status/error messages
-
-             - Purpose:
-               The inline status area is a short, glanceable summary. Keep the inline summary
-               concise so it stays readable in the 320px sidebar. Use the Details panel for full
-               error stacks, long URLs, or debugging output.
-
-             - Length recommendations:
-               * Single-line: aim for <= 40 characters (short action/result).
-               * Multi-line summary: allow up to 3 lines (approx 80-120 characters total).
-               * If message is longer or contains newlines / long URLs, place the full text
-                 in the Details panel and show a short human-friendly summary inline.
-
-             - Format guidelines:
-               * Use sentence case, not ALL CAPS.
-               * Start with a clear status token when helpful (e.g. "Failed:" or "Saved:").
-               * Include a short human action when appropriate (e.g. "Try reloading the file.").
-               * Don't include raw stack traces or long query strings in the inline summary.
-
-             - Line breaks and word-wrapping:
-               * Break lines at logical boundaries (after a phrase, before a stack trace or JSON).
-               * For long unbroken tokens (URLs, IDs) rely on CSS (`overflow-wrap: anywhere`)
-                 so the UI doesn't overflow the sidebar.
-               * Use the Details panel (preformatted) to preserve original line breaks.
-
-             - Accessibility and discoverability:
-               * Keep a short inline summary; set the `title` attribute to the full message so
-                 users can hover to read it.
-               * Provide a "Details" link that expands the full message and a Copy button so
-                 users can copy full error text for bug reports.
-
-             - Example:
-               Inline (summary): "Failed: file not found - check access"
-               Details (expanded): "Error: File not found at path /foo/bar. Full stack:\n    at ..."
-
-             These rules keep the sidebar compact and readable while enabling access to full
-             diagnostic information when needed.
-            */
-
             function shouldShowDetails(msg) {
                 if (!msg) return false;
                 return msg.length > 100 || msg.indexOf('\n') !== -1 || /https?:\/\//.test(msg);
@@ -360,26 +329,15 @@
 
             function showStatus(msg, isError) {
                 const safeMsg = msg || '';
-                // short clamped summary
                 statusTextEl.textContent = safeMsg;
-                statusTextEl.title = safeMsg; // full text on hover
-
-                // details panel content (preformatted)
+                statusTextEl.title = safeMsg;
                 statusDetailsText.textContent = safeMsg;
-
-                // styles
                 statusEl.classList.toggle('status--error', !!isError && !!safeMsg);
                 statusEl.classList.toggle('status--ok', !isError && !!safeMsg);
-
-                // controls visibility
                 statusCloseBtn.style.display = safeMsg ? 'inline-block' : 'none';
-
-                // show Details link only when message likely needs expansion
                 const showDetails = shouldShowDetails(safeMsg);
                 statusDetailsLink.style.display = showDetails ? 'inline-block' : 'none';
                 statusDetailsLink.setAttribute('aria-expanded', 'false');
-
-                // hide expanded details when updating message
                 statusDetails.style.display = 'none';
             }
 
@@ -393,7 +351,7 @@
                         return 'Invalid URL format.';
                     }
                 }
-                if (method === 'gdrive') {
+                if (method === 'gDrive') {
                     const v = value.trim();
                     if (!/[-\w]{25,}/.test(v) && !/drive\.google\.com/.test(v)) {
                         return 'Enter a valid Google Drive / Sheet link or ID.';
@@ -403,9 +361,11 @@
             }
 
             function saveLast(method, target) {
+                lastMethod = method;
+                lastValue = target;
                 try {
-                    localStorage.setItem(LS_METHOD, method);
-                    localStorage.setItem(LS_TARGET, target);
+                    localStorage.setItem(lsMethod, method);
+                    localStorage.setItem(lsTarget, target);
                 } catch (e) {
                     // ignore storage errors
                 }
@@ -413,8 +373,8 @@
 
             function loadLast() {
                 try {
-                    const m = localStorage.getItem(LS_METHOD);
-                    const t = localStorage.getItem(LS_TARGET);
+                    const m = localStorage.getItem(lsMethod);
+                    const t = localStorage.getItem(lsTarget);
                     if (m) methodEl.value = m;
                     if (t) inputEl.value = t;
                 } catch (e) { /* ignore */ }
@@ -432,38 +392,73 @@
                 return '';
             }
 
-            function callServer(method, value) {
-                const correlationId = generateCorrelationId();
+            function handleError(err) {
+                // Show the backend error message
+                showStatus(err.message, true);
 
+                // Highlight input and show retry for file not found
+                if (err.code === "file_not_found") {
+                    inputEl.classList.add("input-error");
+                    retryBtn.style.display = "inline-block";
+                    retryBtn.onclick = function () {
+                        callServer(lastMethod, lastValue);
+                    };
+                    statusDetailsText.textContent =
+                        "Troubleshooting:\n" +
+                        "- Check for typos in the filename or link\n" +
+                        "- Ensure the file exists in your Google Drive\n" +
+                        "- If using a link, ensure it is a valid Google Drive sharing link";
+                } else {
+                    inputEl.classList.remove("input-error");
+                    retryBtn.style.display = "none";
+                }
+            }
+
+            function callServer(method, value) {
                 setBusy(true);
                 showStatus('Sending request...', false);
                 saveLast(method, value);
 
+                // --- Timeout logic start ---
+                let timedOut = false;
+                const timeoutId = setTimeout(() => {
+                    timedOut = true;
+                    setBusy(false);
+                    showStatus('Operation timed out after 30 seconds. Please try again or check your network.', true);
+                }, 30000); // 30 seconds
+                // --- Timeout logic end ---
+
                 const handlers = {
                     success: function (msg) {
+                        if (timedOut) return;
+                        clearTimeout(timeoutId);
                         setBusy(false);
+                        inputEl.classList.remove("input-error");
+                        retryBtn.style.display = "none";
                         showStatus(msg || 'Done', false);
                     },
                     failure: function (err) {
+                        if (timedOut) return;
+                        clearTimeout(timeoutId);
                         setBusy(false);
-                        const text = (err && (err.message || err.toString())) || 'unknown';
-                        showStatus('Failed: ' + text, true);
+                        handleError(err);
 
-                        // Prepare structured context for server logging
+                        // Logging (unchanged)
                         try {
                             const errStack = (err && err.stack) ? err.stack : (err && err.toString ? err.toString() : String(err));
                             const masked = maskForLogging(method, value);
-                            const fingerprint = fingerprintForLogging(method, text, masked);
+                            const fingerprint = fingerprintForLogging(method, err.message || err.toString(), masked);
 
-                            // Only send sampled, de-duplicated client errors to avoid noise and privacy leaks.
                             if (shouldLogClientError(fingerprint)) {
-                                // Fire-and-forget server-side logging. Swallow any logging failures.
-                                try {
-                                    google.script.run
-                                        .withFailureHandler(function () { /* swallow logging failures */ })
-                                        .reportError(text, method, errStack);
-                                } catch (e) {
-                                    // ignore if google.script.run not present
+                                const scriptRun = window.google && window.google.script && window.google.script.run;
+                                if (scriptRun && typeof scriptRun.reportError === "function") {
+                                    try {
+                                        scriptRun
+                                            .withFailureHandler(function () { /* swallow logging failures */ })
+                                            .reportError(err.message || err.toString(), method, errStack);
+                                    } catch (e) {
+                                        // ignore if google.script.run not present
+                                    }
                                 }
                             }
                         } catch (e) {
@@ -472,35 +467,37 @@
                     }
                 };
 
-                if (method === 'mydrive') {
-                    google.script.run
+                const scriptRun = window.google && window.google.script && window.google.script.run;
+
+                if (method === 'myDrive') {
+                    scriptRun
                         .withSuccessHandler(handlers.success)
                         .withFailureHandler(handlers.failure)
-                        .importRidersFromMyDrive(value.trim());
-                } else if (method === 'gdrive') {
-                    google.script.run
+                        .importRidersFrommyDrive(value.trim());
+                } else if (method === 'gDrive') {
+                    scriptRun
                         .withSuccessHandler(handlers.success)
                         .withFailureHandler(handlers.failure)
                         .importRidersFromGoogleDriveLink(value.trim());
                 } else if (method === 'url') {
-                    google.script.run
+                    scriptRun
                         .withSuccessHandler(handlers.success)
                         .withFailureHandler(handlers.failure)
                         .importRidersFromUrl(value.trim());
                 } else {
+                    clearTimeout(timeoutId);
                     setBusy(false);
                     showStatus('Unknown method', true);
                 }
             }
 
-            // paste detection
-            inputEl.addEventListener('paste', function (ev) {
+            inputEl.addEventListener('paste', function () {
                 setTimeout(() => {
                     const val = inputEl.value || '';
                     if (/drive\.google\.com|docs\.google\.com|spreadsheets\.google\.com/i.test(val)) {
                         const id = extractDriveId(val);
                         if (id) {
-                            methodEl.value = 'gdrive';
+                            methodEl.value = 'gDrive';
                             inputEl.value = id;
                             showStatus('Detected Drive link; extracted ID.', false);
                         }
@@ -508,7 +505,6 @@
                 }, 50);
             });
 
-            // Refresh click
             refreshBtn.addEventListener('click', function () {
                 const method = methodEl.value;
                 const value = inputEl.value || '';
@@ -520,26 +516,29 @@
                 callServer(method, value);
             });
 
-            // Help click
             helpBtn.addEventListener('click', function () {
-                google.script.run.showHelpDocument();
+                const scriptRun = window.google && window.google.script && window.google.script.run;
+                if (scriptRun && typeof scriptRun.showHelpDocument === "function") {
+                    scriptRun.showHelpDocument();
+                }
             });
 
-            // Close sidebar explicitly
             closeBtn.addEventListener('click', function () {
                 if (busyCount > 0) {
                     showStatus('Operation in progress - please wait.', true);
                     return;
                 }
-                google.script.host.close();
+                if (window.google && window.google.script && window.google.script.host) {
+                    window.google.script.host.close();
+                }
             });
 
-            // Dismiss status
             statusCloseBtn.addEventListener('click', function () {
                 showStatus('', false);
+                inputEl.classList.remove("input-error");
+                retryBtn.style.display = "none";
             });
 
-            // Toggle details panel
             statusDetailsLink.addEventListener('click', function () {
                 const expanded = statusDetails.style.display === 'flex';
                 if (expanded) {
@@ -548,18 +547,15 @@
                 } else {
                     statusDetails.style.display = 'flex';
                     statusDetailsLink.setAttribute('aria-expanded', 'true');
-                    // focus the details content for keyboard users
                     statusDetailsText.focus();
                 }
             });
 
-            // Close details action
             closeDetailsBtn.addEventListener('click', function () {
                 statusDetails.style.display = 'none';
                 statusDetailsLink.setAttribute('aria-expanded', 'false');
             });
 
-            // Copy details to clipboard (with fallback)
             copyDetailsBtn.addEventListener('click', function () {
                 const text = statusDetailsText.textContent || '';
                 if (!text) {
@@ -567,7 +563,6 @@
                     return;
                 }
 
-                // Try navigator.clipboard first
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(text).then(() => {
                         showStatus('Copied to clipboard', false);
@@ -596,7 +591,6 @@
                 }
             });
 
-            // Keyboard shortcuts for input
             inputEl.addEventListener('keydown', function (ev) {
                 if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey)) {
                     ev.preventDefault();
@@ -607,11 +601,12 @@
                         closeBtn.click();
                     } else {
                         showStatus('', false);
+                        inputEl.classList.remove("input-error");
+                        retryBtn.style.display = "none";
                     }
                 }
             });
 
-            // Initial load
             loadLast();
             inputEl.focus();
             setBusy(false);

@@ -6,9 +6,6 @@ type RiderNormalized = RiderRaw & {
     zwiftId: string;
 };
 declare function bestEffortNormalize(raw: RiderRaw, key: string): RiderNormalized;
-declare function dictionaryToArray(dict: {
-    [key: string]: string | RiderRaw;
-}): RiderRaw[];
 declare function deserializeRiderItem(raw: RiderRaw): RiderNormalized;
 declare function riderItem(raw: RiderRaw): RiderNormalized;
 declare function dictionaryToNormalisedArray(dict: {

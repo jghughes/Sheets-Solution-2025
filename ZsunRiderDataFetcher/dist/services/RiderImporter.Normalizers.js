@@ -17,43 +17,6 @@ function bestEffortNormalize(raw, key) {
     o.zwiftId = String(o.zwiftId || o.zwift_id || key);
     return o;
 }
-function dictionaryToArray(dict) {
-    const out = [];
-    for (const [key, rawValue] of Object.entries(dict)) {
-        let raw;
-        if (typeof rawValue === "string") {
-            const t = rawValue.trim();
-            if (t === "")
-                continue;
-            try {
-                raw = JSON.parse(t);
-            }
-            catch (err) {
-                continue;
-            }
-        }
-        else {
-            raw = rawValue;
-        }
-        if (typeof raw !== "object" || Array.isArray(raw))
-            continue;
-        const entry = {};
-        for (const [k2, v] of Object.entries(raw)) {
-            entry[k2] = v;
-            try {
-                const camel = snakeToCamel(k2);
-                if (!(camel in entry))
-                    entry[camel] = v;
-            }
-            catch (err) {
-                // ignore
-            }
-        }
-        entry.zwiftId = String(entry.zwiftId || entry.zwift_id || key);
-        out.push(entry);
-    }
-    return out;
-}
 function dictionaryToNormalisedArray(dict) {
     const out = [];
     for (const [key, rawValue] of Object.entries(dict)) {

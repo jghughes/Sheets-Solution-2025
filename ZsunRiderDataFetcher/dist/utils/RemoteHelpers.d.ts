@@ -9,6 +9,5 @@
  * - Any string containing a valid ID
  * Returns empty string if no valid ID is found.
  */
-declare function extractGoogleDriveFileIdFromString(input: string): string;
-export { extractGoogleDriveFileIdFromString };
+export declare function extractGoogleDriveFileIdFromString(input: string): string;
 //# sourceMappingURL=RemoteHelpers.d.ts.map

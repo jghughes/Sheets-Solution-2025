@@ -1,7 +1,4 @@
-// Sheets01 / src / services / RidersImporter.Writers.js
-// Sheet-writing helpers for Source, Normalised and Precomputed sheets
-
-function writeSourceSheet(records, nameOfSheet) {
+function writeSourceDataSheet(records, nameOfSheet) {
     nameOfSheet = nameOfSheet || "Source";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(nameOfSheet);
@@ -38,7 +35,7 @@ function writeSourceSheet(records, nameOfSheet) {
     if (data.length > 0) sheet.getRange(2, 1, data.length, keys.length).setValues(data);
 }
 
-function writeNormalisedSheet(riders, nameOfSheet) {
+function writePrettyDataSheet(riders, nameOfSheet) {
     nameOfSheet = nameOfSheet || "Normalised";
     var columns = [
         ["Zwift ID", "zwiftId"],
@@ -90,7 +87,7 @@ function writeNormalisedSheet(riders, nameOfSheet) {
     if (data.length > 0) sheet.getRange(2, 1, data.length, columns.length).setValues(data);
 }
 
-function writePrecomputedSheet(records, nameOfSheet) {
+function writeCalculatedSheet(records, nameOfSheet) {
     nameOfSheet = nameOfSheet || "Precomputed";
     var columns = [
         ["Zwift ID", "zwiftId"],

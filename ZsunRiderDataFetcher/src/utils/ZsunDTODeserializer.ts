@@ -1,11 +1,12 @@
-import { ZsunDTO } from "../models/ZsunDTO";
-import { parseField, parseType } from "../utils/ParsersAndSerializers";
+import { ZSunDto as ZsunDTO } from "../models/ZSunDTO";
+import { parseField, parseType } from "../utils/SerialisationUtils";
 
 /**
- * Attempts to parse a JSON string and populate a ZsunDTO instance.
+ * Attempts to parse a JSON string which is known to be
+ * a single serialised ZsunDTO.
  * Returns null if the string is not valid JSON or not an object.
  */
-export function deserializeZsunDTO(jsonString: string): ZsunDTO | null {
+export function deserializeSingleZSunDto(jsonString: string): ZsunDTO | null {
     if (typeof jsonString !== "string" || jsonString.trim() === "") {
         return null;
     }
@@ -52,3 +53,4 @@ export function deserializeZsunDTO(jsonString: string): ZsunDTO | null {
     dto.zsun_when_curves_fitted = parseField(obj, ["zsun_when_curves_fitted"], parseType.stringType, "") as string;
     return dto;
 }
+

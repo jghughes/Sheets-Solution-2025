@@ -1,4 +1,4 @@
-export class ZsunDTO {
+export class ZSunDto {
     zwift_id: string = "";
     name: string = "";
     zwiftracingapp_country_alpha2: string = "";
