@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base target="_top">
+  <style>
+    :root { --accent: #1a73e8; --muted: #6b7280; --bg: #ffffff; --card: #f7fbff; }
+    body { font-family: Roboto, Arial, sans-serif; color: #111827; margin: 18px; background: var(--bg); }
+    h1 { margin: 0 0 8px 0; font-size: 18px; color: var(--accent); }
+    h2 { font-size: 14px; margin: 14px 0 6px; }
+    p { margin: 6px 0; line-height: 1.4; color: #222; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    .section { background: var(--card); border-radius: 6px; padding: 12px; margin: 8px 0; }
+    .example { background: #fff; border-left: 3px solid var(--accent); padding: 8px 10px; margin: 8px 0; font-family: monospace; }
+    ul { margin: 6px 0 6px 18px; }
+    .note { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .footer { margin-top: 12px; font-size: 12px; color: var(--muted); }
+    a { color: var(--accent); text-decoration: none; }
+    .close { margin-top: 12px; }
+    button { background: var(--accent); color: white; border: 0; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>MasterList & Lookup Guide</h1>
+
+  <div class="section">
+    <h2>Overview</h2>
+    <p>
+      Use the sidebar <strong>Fetch</strong> buttons to download the remote JSON dictionary and populate a sheet named
+      <code>MasterList</code>. That sheet contains one row per rider and precomputed columns (Name, Initials, Stats01, Stats02, etc.).
+      You can then use native Google Sheets lookups to populate scattered cells anywhere in the workbook.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2>How to fetch data</h2>
+    <ul>
+      <li>Open the sidebar (appears automatically on open, or use the <em>Rider Tools</em> menu).</li>
+      <li>Click one of the fetch buttons and provide the requested value (filename, Drive link or URL).</li>
+      <li>After fetch completes a sheet called <code>MasterList</code> will be created or refreshed.</li>
+    </ul>
+    <p class="note">If fetch fails, an alert will indicate the error. Re-run the fetch when network or file issues are resolved.</p>
+  </div>
+
+  <div class="section">
+    <h2>MasterList structure</h2>
+    <p>The sheet produced by the fetch has a header row and these important columns (a subset shown):</p>
+    <ul>
+      <li><code>Zwift ID</code> � unique identifier (use this as your lookup key)</li>
+      <li><code>Name</code> � rider full name</li>
+      <li><code>Initials</code> � precomputed initials (lowercase)</li>
+      <li><code>Stats01</code> � precomputed string, e.g. category and FTP/Wkg</li>
+      <li><code>Stats02</code> � precomputed string, e.g. cat number and velo rating</li>
+      <li>Plus other columns such as <code>weightKg</code>, <code>zwiftZrsScore</code>, etc.</li>
+    </ul>
+    <p class="note">Columns are written by the system; you can hide or protect <code>MasterList</code> if desired.</p>
+  </div>
+
+  <div class="section">
+    <h2>Recommended lookup formulas</h2>
+    <p>Pick the pattern that suits your Sheets version and preference.</p>
+
+    <h3>XLOOKUP (preferred when available)</h3>
+    <div class="example">
+      =XLOOKUP(A2, MasterList!$A:$A, MasterList!$B:$B, "")<br/>
+      (returns Name for ID in cell <code>A2</code>)
+    </div>
+
+    <h3>INDEX / MATCH (robust)</h3>
+    <div class="example">
+      =IFERROR(INDEX(MasterList!$B:$B, MATCH(A2, MasterList!$A:$A, 0)), "")<br/>
+      (returns Name; wrap in <code>IFERROR</code> to hide <code>#N/A</code>)
+    </div>
+
+    <h3>VLOOKUP (works but fragile)</h3>
+    <div class="example">
+      =IFERROR(VLOOKUP(A2, MasterList!$A:$AZ, 2, FALSE), "")<br/>
+      (index 2 assumes Name is the second column)
+    </div>
+
+    <p class="note">Use absolute ranges (e.g. <code>MasterList!$A:$AZ</code>) or Named Ranges to copy formulas safely across sheets.</p>
+  </div>
+
+  <div class="section">
+    <h2>Populate scattered cells</h2>
+    <p>
+      Because lookups are native formulations, you can place them anywhere � in different sheets and cells. For performance:
+    </p>
+    <ul>
+      <li>Fetch once at the start of your session using the sidebar.</li>
+      <li>Avoid re-fetching repeatedly while working; refresh only when you need updated data.</li>
+      <li>Prefer native lookups over custom functions for speed and reliability.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Refreshing the MasterList</h2>
+    <p>
+      Run the fetch action from the sidebar again to refresh data. If you update the source JSON frequently, fetch at the beginning of each session.
+    </p>
+    <p class="note">After refreshing, all lookup formulas will immediately reflect the new values.</p>
+  </div>
+
+  <div class="section">
+    <h2>Troubleshooting</h2>
+    <ul>
+      <li>If a lookup returns blank, verify the key matches exactly (no extra spaces or type mismatch).</li>
+      <li>If <code>#N/A</code> appears, wrap the lookup with <code>IFERROR(...,"")</code>.</li>
+      <li>If MasterList is missing, re-run a fetch from the sidebar.</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <div>Quick tips:</div>
+    <ul>
+      <li>Create named ranges for <code>MasterList</code> columns (e.g. <code>ML_ID</code>, <code>ML_Name</code>) for clearer formulas.</li>
+      <li>Hide or protect <code>MasterList</code> to prevent accidental edits.</li>
+    </ul>
+  </div>
+
+  <div class="close">
+    <button onclick="google.script.host.close()">Close</button>
+  </div>
+</body>
+</html>

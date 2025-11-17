@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        :root {
+            --background: #fff;
+            --foreground: #222;
+            --primary: #1a73e8;
+            --secondary-bg: #e8eaf6;
+            --secondary-fg: #1a237e;
+            --error: #b00020;
+            --success: #2e7d32;
+        }
+
+        .theme-dark {
+            --background: #181a1b;
+            --foreground: #e0e0e0;
+            --primary: #90caf9;
+            --secondary-bg: #263238;
+            --secondary-fg: #bbdefb;
+            --error: #ff5370;
+            --success: #80cbc4;
+        }
+
+        body {
+            background: var(--background);
+            color: var(--foreground);
+            font-family: Roboto, Arial, sans-serif;
+            margin: 12px;
+        }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-weight: 500;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin: 8px 0;
+            align-items: center;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        @media (max-width: 600px) {
+            .row.controls {
+                flex-direction: column;
+                gap: 4px;
+                align-items: stretch;
+            }
+
+            button {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+        button {
+            padding: 10px;
+            font-size: 14px;
+            border: 0;
+            background: var(--primary);
+            color: var(--background);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+            button.secondary {
+                background: var(--secondary-bg);
+                color: var(--secondary-fg);
+                border: none;
+            }
+
+            button:disabled {
+                opacity: 0.6;
+                cursor: default;
+            }
+
+            button:focus {
+                outline: 2px solid var(--primary);
+                outline-offset: 2px;
+            }
+
+        .note {
+            font-size: 12px;
+            color: #555;
+            margin-top: 8px;
+        }
+
+        .small {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 6px 8px;
+            border-radius: 4px;
+            background: transparent;
+        }
+
+        .status__text {
+            flex: 1;
+            font-size: 12px;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: calc(1.25em * 3);
+        }
+
+        .status__close {
+            display: none;
+            padding: 2px 6px;
+            font-size: 12px;
+            line-height: 1;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .status__detailsLink {
+            display: none;
+            padding: 2px 6px;
+            font-size: 12px;
+            line-height: 1;
+            border: 0;
+            background: transparent;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        .status--error {
+            color: var(--error);
+            background: rgba(176, 0, 32, 0.04);
+        }
+
+        .status--ok {
+            color: var(--success);
+            background: rgba(46, 125, 50, 0.04);
+        }
+
+        .status__details {
+            margin-top: 8px;
+            padding: 8px;
+            border-radius: 4px;
+            background: #f7f7fb;
+            border: 1px solid #ececec;
+            font-size: 12px;
+            display: none;
+            gap: 8px;
+            flex-direction: column;
+        }
+
+            .status__details pre {
+                margin: 0;
+                padding: 8px;
+                background: #fff;
+                border-radius: 4px;
+                border: 1px solid #e5e5e5;
+                max-height: 120px;
+                overflow: auto;
+                white-space: pre-wrap;
+                word-break: break-word;
+                font-family: inherit;
+                font-size: 12px;
+            }
+
+            .status__details .actions {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(0,0,0,0.08);
+            border-top-color: var(--background);
+            border-radius: 50%;
+            box-sizing: border-box;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 6px;
+            transform: translateY(-1px);
+            animation: spin 1s linear infinite;
+            visibility: hidden;
+        }
+
+        .spinner--visible {
+            visibility: visible;
+            border-top-color: var(--background);
+        }
+
+        button.secondary .spinner {
+            border-top-color: var(--secondary-fg);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <h3>Rider info</h3>
+    <div class="row controls">
+        <button id="refreshBtn" title="Refresh rider data (Ctrl+Enter)" aria-label="Refresh rider data">
+            Refresh
+            <span id="refreshSpinner" class="spinner" aria-hidden="true"></span>
+        </button>
+        <button id="helpBtn" class="secondary" title="Show help documentation" aria-label="Show help documentation">Help</button>
+        <button id="closeBtn" class="secondary" aria-label="Close sidebar" title="Close sidebar">Close</button>
+    </div>
+    <div id="status" class="small note status" aria-live="polite">
+        <span class="status__text" id="statusText"></span>
+        <button id="statusDetailsLink" class="status__detailsLink" aria-expanded="false" title="Show details" aria-label="Show details">Details</button>
+        <button id="statusClose" class="status__close" aria-label="Dismiss status" title="Dismiss status">x</button>
+        <div id="statusDetails" class="status__details" role="region" aria-label="Status details">
+            <pre id="statusDetailsText" tabindex="0"></pre>
+            <div class="actions">
+                <button id="copyDetailsBtn" title="Copy details to clipboard" aria-label="Copy details to clipboard">Copy</button>
+                <button id="closeDetailsBtn" class="secondary" title="Close details" aria-label="Close details">Close</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            // --- Theme detection and application ---
+            function applyTheme() {
+                // Use prefers-color-scheme, or integrate with sheet's theme if available
+                const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.body.classList.toggle('theme-dark', isDark);
+            }
+            applyTheme();
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+            }
+
+            // --- State and DOM references ---
+            const statusEl = document.getElementById('status');
+            const statusTextEl = document.getElementById('statusText');
+            const statusCloseBtn = document.getElementById('statusClose');
+            const statusDetailsLink = document.getElementById('statusDetailsLink');
+            const statusDetails = document.getElementById('statusDetails');
+            const statusDetailsText = document.getElementById('statusDetailsText');
+            const copyDetailsBtn = document.getElementById('copyDetailsBtn');
+            const closeDetailsBtn = document.getElementById('closeDetailsBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const helpBtn = document.getElementById('helpBtn');
+            const closeBtn = document.getElementById('closeBtn');
+            const spinnerEl = document.getElementById('refreshSpinner');
+
+            // --- Debounce utility ---
+            function debounce(fn, delay) {
+                let timer = null;
+                return function (...args) {
+                    if (timer) return;
+                    timer = setTimeout(() => {
+                        timer = null;
+                    }, delay);
+                    fn.apply(this, args);
+                };
+            }
+
+            // --- UI state helpers ---
+            let busyCount = 0;
+            function setBusy(on) {
+                busyCount = on ? busyCount + 1 : Math.max(0, busyCount - 1);
+                const isBusy = busyCount > 0;
+                refreshBtn.disabled = isBusy;
+                helpBtn.disabled = isBusy;
+                closeBtn.disabled = isBusy;
+                spinnerEl.classList.toggle('spinner--visible', isBusy);
+            }
+            function showStatus(msg, isError) {
+                const safeMsg = msg || '';
+                statusTextEl.textContent = safeMsg;
+                statusTextEl.title = safeMsg;
+                statusDetailsText.textContent = safeMsg;
+                statusEl.classList.toggle('status--error', !!isError && !!safeMsg);
+                statusEl.classList.toggle('status--ok', !isError && !!safeMsg);
+                statusCloseBtn.style.display = safeMsg ? 'inline-block' : 'none';
+                const showDetails = safeMsg.length > 100 || safeMsg.indexOf('\n') !== -1 || /https?:\/\//.test(safeMsg);
+                statusDetailsLink.style.display = showDetails ? 'inline-block' : 'none';
+                statusDetailsLink.setAttribute('aria-expanded', 'false');
+                statusDetails.style.display = 'none';
+            }
+
+            // --- Error handling ---
+            function handleError(err) {
+                showStatus("An unexpected error occurred.", true);
+                if (err && err.stack) {
+                    statusDetailsText.textContent = "Technical details:\n" + err.stack;
+                }
+            }
+
+            // --- Server communication ---
+            function refreshRidersFromServer() {
+                setBusy(true);
+                showStatus('Sending request...', false);
+
+                let timedOut = false;
+                const timeoutId = setTimeout(() => {
+                    timedOut = true;
+                    setBusy(false);
+                    showStatus('Operation timed out after 30 seconds. Please try again or check your network.', true);
+                }, 30000);
+
+                const handlers = {
+                    success: function (msg) {
+                        if (timedOut) return;
+                        clearTimeout(timeoutId);
+                        setBusy(false);
+                        showStatus(msg || 'Done', false);
+                    },
+                    failure: function (err) {
+                        if (timedOut) return;
+                        clearTimeout(timeoutId);
+                        setBusy(false);
+                        handleError(err);
+                    }
+                };
+
+                const scriptRun = window.google && window.google.script && window.google.script.run;
+                if (scriptRun && typeof scriptRun.importRidersFromUrl === "function") {
+                    scriptRun
+                        .withSuccessHandler(handlers.success)
+                        .withFailureHandler(handlers.failure)
+                        .importRidersFromUrl();
+                } else {
+                    clearTimeout(timeoutId);
+                    setBusy(false);
+                    showStatus('Server method not available.', true);
+                }
+            }
+
+            // --- Event handlers with debounce ---
+            refreshBtn.addEventListener('click', debounce(function () {
+                refreshRidersFromServer();
+            }, 500));
+            helpBtn.addEventListener('click', debounce(function () {
+                const scriptRun = window.google && window.google.script && window.google.script.run;
+                if (scriptRun && typeof scriptRun.showHelpDocument === "function") {
+                    scriptRun.showHelpDocument();
+                }
+            }, 500));
+            closeBtn.addEventListener('click', debounce(function () {
+                if (busyCount > 0) {
+                    showStatus('Operation in progress - please wait.', true);
+                    return;
+                }
+                if (window.google && window.google.script && window.google.script.host) {
+                    window.google.script.host.close();
+                }
+            }, 500));
+            statusCloseBtn.addEventListener('click', function () {
+                showStatus('', false);
+            });
+            statusDetailsLink.addEventListener('click', function () {
+                const expanded = statusDetails.style.display === 'flex';
+                if (expanded) {
+                    statusDetails.style.display = 'none';
+                    statusDetailsLink.setAttribute('aria-expanded', 'false');
+                } else {
+                    statusDetails.style.display = 'flex';
+                    statusDetailsLink.setAttribute('aria-expanded', 'true');
+                    statusDetailsText.focus();
+                }
+            });
+            closeDetailsBtn.addEventListener('click', function () {
+                statusDetails.style.display = 'none';
+                statusDetailsLink.setAttribute('aria-expanded', 'false');
+            });
+            copyDetailsBtn.addEventListener('click', function () {
+                const text = statusDetailsText.textContent || '';
+                if (!text) {
+                    showStatus('Nothing to copy', true);
+                    return;
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        showStatus('Copied to clipboard', false);
+                    }).catch(() => {
+                        fallbackCopy(text);
+                    });
+                } else {
+                    fallbackCopy(text);
+                }
+                function fallbackCopy(t) {
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = t;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        document.body.appendChild(ta);
+                        ta.select();
+                        const ok = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        if (ok) showStatus('Copied to clipboard', false);
+                        else showStatus('Copy failed', true);
+                    } catch (e) {
+                        showStatus('Copy failed', true);
+                    }
+                }
+            });
+
+            // --- Initialization ---
+            setBusy(false);
+            showStatus('', false);
+        })();
+    </script>
+</body>
+</html>
