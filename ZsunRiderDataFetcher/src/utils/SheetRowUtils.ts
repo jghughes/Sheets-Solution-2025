@@ -2,12 +2,18 @@ import {
     serverErrorCode,
     throwServerErrorWithContext,
     getErrorMessage,
-    toError
 } from "./ErrorUtils";
+import {
+    ensureSheetExists,
+    logApiError,
+    getPropertyNames,
+    isValidZwiftId
+} from "./SheetRowHelpers";
 import { toZwiftIdDictionary } from "./CollectionUtils";
 import { logEvent, LogLevel } from "./Logger";
 import { SheetApi } from "./SheetApi";
 import { IHasZwiftId } from "../interfaces/IHasZwiftId";
+
 
 /**
  * Writes an array of items implementing IHasZwiftId to a specified sheet.
@@ -21,111 +27,87 @@ export function writeSheetRowsByZwiftId<T extends IHasZwiftId>(
     records: T[],
 ): void {
     sheetName = sheetName || "Dump";
-    let missingCount = 0;
+    let missingZwiftIdCount = 0;
     let errorCount = 0;
 
     try {
-        // Ensure sheet exists and clear it
-        const sheetExists = sheetApi.sheetExists(sheetName);
-        if (!sheetExists) {
-            sheetApi.insertSheet(sheetName);
-        } else {
-            sheetApi.clearSheet(sheetName);
-        }
+        ensureSheetExists(sheetApi, sheetName, true);
 
         if (!records || records.length === 0) {
             sheetApi.appendRow(sheetName, ["Zwift ID"]);
             logEvent({
-                message: `No records to write in writeAllRecordsToSheet`,
+                message: `No records to write in writeSheetRowsByZwiftId`,
                 level: LogLevel.INFO,
                 extraFields: { sheetName }
             });
             return;
         }
 
-        // Use keys from the first record only, preserving order
-        const firstRecord = records[0] || {};
-        const keys = Object.keys(firstRecord);
-
-        // Move zwiftId to the front if present
-        const zwiftIdIndex = keys.indexOf("zwiftId");
-        if (zwiftIdIndex > 0) {
-            keys.splice(zwiftIdIndex, 1);
-            keys.unshift("zwiftId");
-        }
-
-        sheetApi.appendRow(sheetName, keys);
+        const propertyNames = getPropertyNames(records);
+        sheetApi.appendRow(sheetName, propertyNames);
 
         // Prepare data rows
-        const data: any[][] = [];
-        for (let idx = 0; idx < records.length; idx++) {
-            const r = records[idx];
-            const zwiftId = r && r["zwiftId"];
-            if (!zwiftId || typeof zwiftId !== "string" || zwiftId.trim().length === 0) {
-                missingCount++;
+        const dataRows: any[][] = [];
+        for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
+            const record = records[recordIndex];
+            const zwiftId = record && record["zwiftId"];
+            if (!isValidZwiftId(zwiftId)) {
+                missingZwiftIdCount++;
                 logEvent({
-                    message: `Missing zwiftId in record, skipping row in writeAllRecordsToSheet`,
+                    message: `Missing zwiftId in record, skipping row in writeSheetRowsByZwiftId`,
                     level: LogLevel.WARN,
-                    extraFields: { sheetName, idx }
+                    extraFields: { sheetName, recordIndex }
                 });
                 continue;
             }
-            const row = keys.map(k => {
-                const v = (r && r[k] !== undefined) ? r[k] : "";
-                if (v instanceof Date) return v;
-                if (typeof v === "number") return v;
-                if (typeof v === "string") return v;
-                return v == null ? "" : String(v);
+            const rowValues = propertyNames.map(propertyName => {
+                const value = (record && record[propertyName as keyof IHasZwiftId] !== undefined)
+                    ? record[propertyName as keyof IHasZwiftId]
+                    : "";
+                if (typeof value === "number") return value;
+                if (typeof value === "string") return value;
+                return value == null ? "" : String(value);
             });
-            data.push(row);
+            dataRows.push(rowValues);
         }
 
         // Write all data rows in bulk using updateContiguousRows
-        if (data.length > 0) {
+        if (dataRows.length > 0) {
             try {
                 // Header is row 1, so data starts at row 2 (1-based)
-                sheetApi.updateContiguousRows(sheetName, 2, data);
-            } catch (setValuesErr) {
-                errorCount += data.length;
-                logEvent({
-                    message: `API error during updateContiguousRows in writeAllRecordsToSheet`,
-                    level: LogLevel.ERROR,
-                    exception: toError(setValuesErr),
-                    extraFields: {
-                        sheetName,
-                        operation: "updateContiguousRows",
-                        errorType: setValuesErr?.code || setValuesErr?.name,
-                        errorMessage: getErrorMessage(setValuesErr)
-                    }
-                });
+                sheetApi.updateContiguousRows(sheetName, 2, dataRows);
+            } catch (setValuesError) {
+                errorCount += dataRows.length;
+                logApiError(
+                    `API error during updateContiguousRows in writeSheetRowsByZwiftId`,
+                    setValuesError,
+                    sheetName,
+                    "updateContiguousRows"
+                );
             }
         }
 
         logEvent({
-            message: `writeAllRecordsToSheet summary`,
+            message: `writeSheetRowsByZwiftId summary`,
             level: LogLevel.INFO,
             extraFields: {
                 sheetName,
-                missingCount,
+                missingZwiftIdCount,
                 errorCount,
-                writtenCount: data.length
+                writtenCount: dataRows.length
             }
         });
-    } catch (mainErr) {
-        logEvent({
-            message: `writeAllRecordsToSheet error`,
-            level: LogLevel.ERROR,
-            exception: toError(mainErr),
-            extraFields: {
-                sheetName,
-                errorType: mainErr?.code || mainErr?.name,
-                errorMessage: getErrorMessage(mainErr)
-            }
-        });
+    } catch (mainError) {
+        logApiError(
+            `writeSheetRowsByZwiftId error`,
+            mainError,
+            sheetName,
+            "updateContiguousRows"
+        );
         throwServerErrorWithContext(
             serverErrorCode.unexpectedError,
-            `Failed to write data to sheet: ${getErrorMessage(mainErr)}`,
-            "writeAllRecordsToSheet",
+            `Failed to write data to sheet: ${getErrorMessage(mainError)}`,
+            "writeSheetRowsByZwiftId",
             "updateContiguousRows",
             { sheetName }
         );
@@ -147,88 +129,95 @@ export function updateSheetRowsByZwiftId<T extends IHasZwiftId>(
     items: T[],
     maxRowLimit: number = 1000
 ): void {
-    if (!sheetApi.sheetExists(sheetName)) {
-        sheetApi.insertSheet(sheetName);
-    }
+    ensureSheetExists(sheetApi, sheetName);
 
     if (!items || items.length === 0) {
         logEvent({
-            message: `No items to write in writeItemisedRecordsToSheet`,
+            message: `No items to write in updateSheetRowsByZwiftId`,
             level: LogLevel.INFO,
             extraFields: { sheetName }
         });
         return;
     }
 
-    const keys = Object.keys(items[0]);
-    sheetApi.updateRow(sheetName, 1, keys);
+    const propertyNames = getPropertyNames(items);
 
-    const dict = toZwiftIdDictionary(items);
+    sheetApi.updateRow(sheetName, 1, propertyNames);
+
+    const zwiftIdDictionary = toZwiftIdDictionary(items);
 
     let overwriteCount = 0;
     let errorCount = 0;
 
-    const allRows = sheetApi.getAllRows(sheetName);
-    const rowLimit = Math.min(allRows.length, maxRowLimit);
+    const allSheetRows = sheetApi.getAllRows(sheetName);
+    const rowLimit = Math.min(allSheetRows.length, maxRowLimit);
 
     // Find contiguous blocks
-    let blocks: { start: number, rows: any[][] }[] = [];
+    let contiguousBlocks: { start: number, rows: any[][] }[] = [];
     let currentBlock: { start: number, rows: any[][] } | null = null;
 
-    for (let rowIdx = 2; rowIdx <= rowLimit; rowIdx++) { // 1-based, skip header
-        const row = allRows[rowIdx - 1];
-        const cellValue = row && row[0];
+    for (let rowIndex = 2; rowIndex <= rowLimit; rowIndex++) { // 1-based, skip header
+        const sheetRow = allSheetRows[rowIndex - 1];
+        const firstCellValue = sheetRow && sheetRow[0];
 
-        if (!cellValue || typeof cellValue !== "string" || !(cellValue in dict)) {
+        if (!isValidZwiftId(firstCellValue) || !(firstCellValue in zwiftIdDictionary)) {
             if (currentBlock) {
-                blocks.push(currentBlock);
+                contiguousBlocks.push(currentBlock);
                 currentBlock = null;
             }
             continue;
         }
 
-        const record = dict[cellValue];
-        const newRow = keys.map(k => record[k] !== undefined ? record[k] : "");
+        const matchingRecord = zwiftIdDictionary[firstCellValue];
+        if (!matchingRecord) continue; // Guard against undefined
+
+        const updatedRow = propertyNames.map(propertyName =>
+            matchingRecord[propertyName as keyof IHasZwiftId] !== undefined
+                ? matchingRecord[propertyName as keyof IHasZwiftId]
+                : ""
+        );
 
         if (!currentBlock) {
-            currentBlock = { start: rowIdx, rows: [newRow] };
+            currentBlock = { start: rowIndex, rows: [updatedRow] };
         } else {
-            currentBlock.rows.push(newRow);
+            currentBlock.rows.push(updatedRow);
         }
         overwriteCount++;
     }
     if (currentBlock) {
-        blocks.push(currentBlock);
+        contiguousBlocks.push(currentBlock);
     }
 
     // Batch update each block
-    for (const block of blocks) {
-        try {
-            sheetApi.updateContiguousRows(sheetName, block.start, block.rows);
-        } catch (err) {
-            errorCount += block.rows.length;
-            logEvent({
-                message: `API error during updateContiguousRows in writeItemisedRecordsToSheet`,
-                level: LogLevel.ERROR,
-                exception: toError(err),
-                extraFields: {
+    for (const block of contiguousBlocks) {
+        if (
+            typeof block.start === "number" &&
+            Array.isArray(block.rows) &&
+            block.rows.length > 0 &&
+            Array.isArray(block.rows[0])
+        ) {
+            try {
+                sheetApi.updateContiguousRows(sheetName, block.start, block.rows);
+            } catch (updateError) {
+                errorCount += block.rows.length;
+                logApiError(
+                    `API error during updateContiguousRows in updateSheetRowsByZwiftId`,
+                    updateError,
                     sheetName,
-                    operation: "updateContiguousRows",
-                    errorType: err?.code || err?.name,
-                    errorMessage: getErrorMessage(err)
-                }
-            });
+                    "updateContiguousRows"
+                );
+            }
         }
     }
 
     logEvent({
-        message: `writeItemisedRecordsToSheet summary`,
+        message: `updateSheetRowsByZwiftId summary`,
         level: LogLevel.INFO,
         extraFields: {
             sheetName,
             overwriteCount,
             errorCount,
-            blockCount: blocks.length
+            blockCount: contiguousBlocks.length
         }
     });
 }

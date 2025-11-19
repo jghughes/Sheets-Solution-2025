@@ -49,7 +49,8 @@ class SheetApi {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
             const range = sheet.getRange(rowIdx, 1, 1, sheet.getLastColumn());
-            return range.getValues()[0];
+            const values = range.getValues();
+            return values[0] !== undefined ? values[0] : null;
         }
         return null;
     }
@@ -139,10 +140,9 @@ class SheetApi {
     setRangeValues(name, startRow, // 1-based
     startCol, // 1-based
     values) {
-        var _a;
         const sheet = this.spreadsheet.getSheetByName(name);
-        if (sheet) {
-            sheet.getRange(startRow, startCol, values.length, ((_a = values[0]) === null || _a === void 0 ? void 0 : _a.length) || 1).setValues(values);
+        if (sheet && values.length > 0 && values[0] !== undefined && values[0].length > 0) {
+            sheet.getRange(startRow, startCol, values.length, values[0].length).setValues(values);
         }
     }
     /**
@@ -154,7 +154,7 @@ class SheetApi {
      */
     updateContiguousRows(name, startRow, rows) {
         const sheet = this.spreadsheet.getSheetByName(name);
-        if (!sheet || rows.length === 0)
+        if (!sheet || rows.length === 0 || rows[0] === undefined || rows[0].length === 0)
             return;
         const numRows = rows.length;
         const numCols = rows[0].length;

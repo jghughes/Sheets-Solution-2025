@@ -12,7 +12,7 @@ import { RiderStatsItem } from "./models/RiderStatsItem";
 import { logEvent, LogLevel } from "./utils/Logger";
 import { SheetApi } from "./utils/SheetApi";
 import { writeSheetRowsByZwiftId, updateSheetRowsByZwiftId } from "./utils/SheetRowUtils";
-import { defaultSourceUrlForRidersOnAzure } from "../storageConfig";
+import { defaultSourceUrlForRidersOnAzure } from "./storageConfig";
 
 /**
  * Called from SideBar.html via google.script.run

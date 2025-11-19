@@ -58,7 +58,8 @@ export class SheetApi {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
             const range = sheet.getRange(rowIdx, 1, 1, sheet.getLastColumn());
-            return range.getValues()[0];
+            const values = range.getValues();
+            return values[0] !== undefined ? values[0] : null;
         }
         return null;
     }
@@ -167,8 +168,8 @@ export class SheetApi {
         values: any[][]
     ): void {
         const sheet = this.spreadsheet.getSheetByName(name);
-        if (sheet) {
-            sheet.getRange(startRow, startCol, values.length, values[0]?.length || 1).setValues(values);
+        if (sheet && values.length > 0 && values[0] !== undefined && values[0].length > 0) {
+            sheet.getRange(startRow, startCol, values.length, values[0].length).setValues(values);
         }
     }
 
@@ -181,7 +182,7 @@ export class SheetApi {
      */
     updateContiguousRows(name: string, startRow: number, rows: any[][]): void {
         const sheet = this.spreadsheet.getSheetByName(name);
-        if (!sheet || rows.length === 0) return;
+        if (!sheet || rows.length === 0 || rows[0] === undefined || rows[0].length === 0) return;
         const numRows = rows.length;
         const numCols = rows[0].length;
         sheet.getRange(startRow, 1, numRows, numCols).setValues(rows);

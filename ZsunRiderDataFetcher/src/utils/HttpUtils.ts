@@ -13,9 +13,9 @@ import { logEvent, LogLevel } from "./Logger";
  * Checks for internet connectivity by attempting to fetch a known URL.
  * Throws an AlertMessageError if no connection is available.
  */
-export function throwIfNoConnection(urlFetchApp: GoogleAppsScript.URL_Fetch.UrlFetchApp = UrlFetchApp): void {
+export function throwIfNoConnection(): void {
     const opName = "InternetCheck";
-    if (typeof urlFetchApp === "undefined") {
+    if (typeof UrlFetchApp === "undefined") {
         throwAlertMessageError(
             alertMessageErrorCode.userActionRequired,
             "No internet connection. Please check your network and try again.",
@@ -26,7 +26,10 @@ export function throwIfNoConnection(urlFetchApp: GoogleAppsScript.URL_Fetch.UrlF
 
     try {
         // urlFetchApp.fetch(url, params) only supports 'muteHttpExceptions' and 'timeout' in params
-        const resp = urlFetchApp.fetch("https://www.google.com", { muteHttpExceptions: true, timeout: 10000 });
+        const resp = UrlFetchApp.fetch(
+            "https://www.google.com",
+            { muteHttpExceptions: true, timeout: 10000 } as GoogleAppsScript.URL_Fetch.URLFetchRequestOptions & { timeout?: number }
+        );
         const code = resp && typeof resp.getResponseCode === "function" ? resp.getResponseCode() : undefined;
         if (typeof code === "number" && code >= 500) {
             throwAlertMessageError(
@@ -59,22 +62,24 @@ export function throwIfNoConnection(urlFetchApp: GoogleAppsScript.URL_Fetch.UrlF
  * Handles HTTP errors, timeouts, and unexpected response shapes.
  * If a timeout occurs, logs the error and notifies the user.
  * @param url - The URL to fetch.
- * @param urlFetchApp - The UrlFetchApp implementation.
+ * @param maxRetries - Maximum number of retry attempts (default: 2).
+ * @param timeoutMs - Timeout in milliseconds for each request (default: 30000).
  * @returns The file contents as a string.
  * @throws AlertMessageError | ServerError
  */
 export function fetchTextFileFromUrl(
     url: string,
-    urlFetchApp: GoogleAppsScript.URL_Fetch.UrlFetchApp = UrlFetchApp
+    maxRetries: number = 2,
+    timeoutMs: number = 30000
 ): string {
     const opName = "HttpFetch";
-    const maxRetries = 2;
-    const timeoutMs = 30000;
-    let lastError: any = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-            const resp = urlFetchApp.fetch(url, { muteHttpExceptions: true, timeout: timeoutMs });
+            const resp = UrlFetchApp.fetch(
+                url,
+                { muteHttpExceptions: true, timeout: timeoutMs } as GoogleAppsScript.URL_Fetch.URLFetchRequestOptions & { timeout?: number }
+            );
 
             if (typeof resp === "string") return resp;
 

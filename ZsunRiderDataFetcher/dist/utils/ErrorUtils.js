@@ -8,6 +8,8 @@ exports.enrichErrorContext = enrichErrorContext;
 exports.isValidationError = isValidationError;
 exports.isServerError = isServerError;
 exports.isAlertMessageError = isAlertMessageError;
+exports.getErrorMessage = getErrorMessage;
+exports.toError = toError;
 /**
  * Predefined validation error codes for common validation failures.
  */
@@ -190,5 +192,20 @@ function isServerError(err) {
  */
 function isAlertMessageError(err) {
     return err instanceof AlertMessageError;
+}
+/**
+* Safely extracts the error message from any error type.
+*/
+function getErrorMessage(error) {
+    if (error && typeof error.message === "string") {
+        return error.message;
+    }
+    return String(error);
+}
+/**
+ * Safely casts any error to Error if possible.
+ */
+function toError(error) {
+    return error instanceof Error ? error : undefined;
 }
 //# sourceMappingURL=ErrorUtils.js.map

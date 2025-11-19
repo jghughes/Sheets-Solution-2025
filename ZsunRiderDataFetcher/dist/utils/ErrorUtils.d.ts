@@ -142,4 +142,12 @@ export declare function isServerError(err: any): err is ServerError;
  * Type guard to check if an error is an AlertMessageError.
  */
 export declare function isAlertMessageError(err: any): err is AlertMessageError;
+/**
+* Safely extracts the error message from any error type.
+*/
+export declare function getErrorMessage(error: any): string;
+/**
+ * Safely casts any error to Error if possible.
+ */
+export declare function toError(error: any): Error | undefined;
 //# sourceMappingURL=ErrorUtils.d.ts.map

@@ -1,1 +1,1 @@
-{"version":3,"file":"RiderStatsDataService.d.ts","sourceRoot":"","sources":["../../src/services/RiderStatsDataService.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,cAAc,IAAI,cAAc,EAAE,MAAM,0BAA0B,CAAC;AAE5E,wBAAgB,2BAA2B,CACvC,GAAG,EAAE,MAAM,GAAG,cAAc,EAAE,CAgDjC"}
+{"version":3,"file":"RiderStatsDataService.d.ts","sourceRoot":"","sources":["../../src/services/RiderStatsDataService.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,cAAc,IAAI,cAAc,EAAE,MAAM,0BAA0B,CAAC;AAE5E,wBAAgB,2BAA2B,CACvC,GAAG,EAAE,MAAM,GAAG,cAAc,EAAE,CAmDjC"}

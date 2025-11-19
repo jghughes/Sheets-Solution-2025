@@ -12,21 +12,6 @@ const SheetApi_1 = require("./utils/SheetApi");
 const SheetRowUtils_1 = require("./utils/SheetRowUtils");
 const storageConfig_1 = require("../storageConfig");
 /**
- * Safely extracts the error message from any error type.
- */
-function getErrorMessage(error) {
-    if (error && typeof error.message === "string") {
-        return error.message;
-    }
-    return String(error);
-}
-/**
- * Safely casts any error to Error if possible.
- */
-function toError(error) {
-    return error instanceof Error ? error : undefined;
-}
-/**
  * Called from SideBar.html via google.script.run
  */
 /**
@@ -45,11 +30,11 @@ function importRidersFromUrl() {
         return `Downloaded ${riderStatsRecords.length} records from URL. Sheets were refreshed.`;
     }
     catch (importError) {
-        const errorMessage = getErrorMessage(importError);
+        const errorMessage = (0, ErrorUtils_1.getErrorMessage)(importError);
         (0, Logger_1.logEvent)({
             message: `importRidersFromUrl error: ${errorMessage}`,
             level: Logger_1.LogLevel.ERROR,
-            exception: toError(importError)
+            exception: (0, ErrorUtils_1.toError)(importError)
         });
         (0, ErrorUtils_1.throwAlertMessageError)(ErrorUtils_1.alertMessageErrorCode.userActionRequired, "Unable to import rider data. Please check the source URL and your spreadsheet, then try again.", "importRidersFromUrl", "importRidersFromUrl");
     }
@@ -61,11 +46,11 @@ function onInstall() {
         onOpen();
     }
     catch (installError) {
-        const errorMessage = getErrorMessage(installError);
+        const errorMessage = (0, ErrorUtils_1.getErrorMessage)(installError);
         (0, Logger_1.logEvent)({
             message: `onInstall error: ${errorMessage}`,
             level: Logger_1.LogLevel.ERROR,
-            exception: toError(installError)
+            exception: (0, ErrorUtils_1.toError)(installError)
         });
         if ((0, ErrorUtils_1.isValidationError)(installError))
             throw installError;
@@ -81,11 +66,11 @@ function onOpen() {
             .addToUi();
     }
     catch (openError) {
-        const errorMessage = getErrorMessage(openError);
+        const errorMessage = (0, ErrorUtils_1.getErrorMessage)(openError);
         (0, Logger_1.logEvent)({
             message: `onOpen error: ${errorMessage}`,
             level: Logger_1.LogLevel.ERROR,
-            exception: toError(openError)
+            exception: (0, ErrorUtils_1.toError)(openError)
         });
         (0, ErrorUtils_1.throwAlertMessageError)(ErrorUtils_1.alertMessageErrorCode.userActionRequired, "Unable to access the Google Sheets UI. Please ensure you have a spreadsheet open and try again.", "onOpen", "onOpen");
     }
@@ -102,11 +87,11 @@ function showSidebar() {
         SpreadsheetApp.getUi().showSidebar(sidebarHtml);
     }
     catch (sidebarError) {
-        const errorMessage = getErrorMessage(sidebarError);
+        const errorMessage = (0, ErrorUtils_1.getErrorMessage)(sidebarError);
         (0, Logger_1.logEvent)({
             message: `showSidebar error: ${errorMessage}`,
             level: Logger_1.LogLevel.ERROR,
-            exception: toError(sidebarError)
+            exception: (0, ErrorUtils_1.toError)(sidebarError)
         });
         (0, ErrorUtils_1.throwAlertMessageError)(ErrorUtils_1.alertMessageErrorCode.userActionRequired, "Unable to display the sidebar. Please ensure you have a spreadsheet open and try again.", "showSidebar", "showSidebar");
     }
@@ -123,11 +108,11 @@ function showHelpDocument() {
         SpreadsheetApp.getUi().showModalDialog(helpHtml, "Help");
     }
     catch (helpError) {
-        const errorMessage = getErrorMessage(helpError);
+        const errorMessage = (0, ErrorUtils_1.getErrorMessage)(helpError);
         (0, Logger_1.logEvent)({
             message: `showHelpDocument error: ${errorMessage}`,
             level: Logger_1.LogLevel.ERROR,
-            exception: toError(helpError)
+            exception: (0, ErrorUtils_1.toError)(helpError)
         });
         (0, ErrorUtils_1.throwAlertMessageError)(ErrorUtils_1.alertMessageErrorCode.userActionRequired, "Unable to display the help document. Please ensure you have a spreadsheet open and try again.", "showHelpDocument", "showHelpDocument");
     }
