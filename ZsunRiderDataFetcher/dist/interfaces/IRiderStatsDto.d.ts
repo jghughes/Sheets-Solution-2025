@@ -1,7 +1,5 @@
-import { IHasZwiftId } from "../interfaces/IHasZwiftId";
-import { IRiderStatsDto } from "../interfaces/IRiderStatsDto";
-export declare class RiderStatsDto implements IHasZwiftId, IRiderStatsDto {
-    zwiftId: string;
+import { IHasZwiftId } from "./IHasZwiftId";
+export interface IRiderStatsDto extends IHasZwiftId {
     fullName: string;
     zwiftCountryCode3: string;
     ageYears: number;
@@ -49,10 +47,5 @@ export declare class RiderStatsDto implements IHasZwiftId, IRiderStatsDto {
     w40Min: number;
     w60MinCurveFit: number;
     timestamp: string;
-    constructor(data?: Partial<RiderStatsDto>);
-    static fromJson(json: Record<string, any>): RiderStatsDto;
-    toJson(): Record<string, any>;
-    static fromJsonArray(jsonArray: Record<string, any>[]): RiderStatsDto[];
-    static toJsonArray(dtos: RiderStatsDto[]): Record<string, any>[];
 }
-//# sourceMappingURL=RiderStatsDto.d.ts.map
+//# sourceMappingURL=IRiderStatsDto.d.ts.map

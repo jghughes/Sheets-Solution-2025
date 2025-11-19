@@ -22,5 +22,6 @@
     "target": "ES2019",
     "types": [ "google-apps-script", "jest", "node" ]
   },
-  "include": [ "src/**/*", "tests/**/*" ]
+  "include": [ "src/**/*" ],
+  "exclude": [ "tests", "**/*.test.ts", "**/*.spec.ts" ]
 }

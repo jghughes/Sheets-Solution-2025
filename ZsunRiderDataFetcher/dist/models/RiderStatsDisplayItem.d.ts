@@ -1,4 +1,4 @@
-import { IHasZwiftId } from "./IHasZwiftId";
+import { IHasZwiftId } from "../interfaces/IHasZwiftId";
 export declare class RiderStatsDisplayItem implements IHasZwiftId {
     zwiftId: string;
     name: string;

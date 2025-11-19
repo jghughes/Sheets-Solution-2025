@@ -1,6 +1,6 @@
 import { RiderStatsDto } from "./RiderStatsDto";
 import { RiderStatsDisplayItem } from "./RiderStatsDisplayItem";
-import { IHasZwiftId } from "./IHasZwiftId";
+import { IHasZwiftId } from "../interfaces/IHasZwiftId";
 export declare class RiderStatsItem implements IHasZwiftId {
     zwiftId: string;
     fullName: string;

@@ -3,7 +3,9 @@ import {
     throwServerErrorWithContext,
     isValidationError,
     serverErrorCode,
-    alertMessageErrorCode
+    alertMessageErrorCode,
+    getErrorMessage,
+    toError
 } from "./ErrorUtils";
 import { logEvent, LogLevel } from "./Logger";
 
@@ -36,11 +38,11 @@ export function throwIfNoConnection(urlFetchApp: GoogleAppsScript.URL_Fetch.UrlF
         }
         // If code is not a number, assume connection is OK
     } catch (err) {
-        const msg = err && err.message ? err.message : String(err);
+        const msg = getErrorMessage(err);
         logEvent({
             message: "Internet connectivity check failed",
             level: LogLevel.ERROR,
-            exception: err,
+            exception: toError(err),
             extraFields: { opName }
         });
         throwAlertMessageError(
@@ -118,12 +120,12 @@ export function fetchTextFileFromUrl(
                 { url }
             );
         } catch (err) {
-            const msg = err && err.message ? err.message : String(err);
+            const msg = getErrorMessage(err);
             const isTimeout = msg.toLowerCase().includes("timeout");
             logEvent({
                 message: `Attempt ${attempt} failed in fetchTextFileFromUrl${isTimeout ? " (timeout)" : ""}`,
                 level: LogLevel.ERROR,
-                exception: err,
+                exception: toError(err),
                 extraFields: { url, opName, attempt }
             });
 

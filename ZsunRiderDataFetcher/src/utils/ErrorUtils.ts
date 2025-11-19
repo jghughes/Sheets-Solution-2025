@@ -279,3 +279,21 @@ export function isServerError(err: any): err is ServerError {
 export function isAlertMessageError(err: any): err is AlertMessageError {
     return err instanceof AlertMessageError;
 }
+
+/**
+* Safely extracts the error message from any error type.
+*/
+export function getErrorMessage(error: any): string {
+    if (error && typeof error.message === "string") {
+        return error.message;
+    }
+    return String(error);
+}
+
+/**
+ * Safely casts any error to Error if possible.
+ */
+export function toError(error: any): Error | undefined {
+    return error instanceof Error ? error : undefined;
+}
+

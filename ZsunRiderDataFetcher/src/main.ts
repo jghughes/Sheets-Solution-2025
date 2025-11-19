@@ -4,8 +4,9 @@ import {
     isValidationError,
     serverErrorCode,
     alertMessageErrorCode,
+    getErrorMessage,
+    toError
 } from "./utils/ErrorUtils";
-import { printAlertOrError } from "./utils/UserFeedbackUtils";
 import { fetchRiderStatsItemsFromUrl } from "./services/RiderStatsDataService";
 import { RiderStatsItem } from "./models/RiderStatsItem";
 import { logEvent, LogLevel } from "./utils/Logger";
@@ -13,6 +14,9 @@ import { SheetApi } from "./utils/SheetApi";
 import { writeSheetRowsByZwiftId, updateSheetRowsByZwiftId } from "./utils/SheetRowUtils";
 import { defaultSourceUrlForRidersOnAzure } from "../storageConfig";
 
+/**
+ * Called from SideBar.html via google.script.run
+ */
 /**
  * Imports rider data from a URL and writes to the "Dump" and "Squad" sheets.
  * Exposed to Google Apps Script sidebar.
@@ -34,11 +38,11 @@ export function importRidersFromUrl(): string {
         return `Downloaded ${riderStatsRecords.length} records from URL. Sheets were refreshed.`;
 
     } catch (importError) {
-        const errorMessage = importError && importError.message ? importError.message : String(importError);
+        const errorMessage = getErrorMessage(importError);
         logEvent({
             message: `importRidersFromUrl error: ${errorMessage}`,
             level: LogLevel.ERROR,
-            exception: importError
+            exception: toError(importError)
         });
 
         throwAlertMessageError(
@@ -52,15 +56,15 @@ export function importRidersFromUrl(): string {
 }
 
 // --- Existing entry points ---
-function onInstall(): void {
+export function onInstall(): void {
     try {
         onOpen();
     } catch (installError) {
-        const errorMessage = installError && installError.message ? installError.message : String(installError);
+        const errorMessage = getErrorMessage(installError);
         logEvent({
             message: `onInstall error: ${errorMessage}`,
             level: LogLevel.ERROR,
-            exception: installError
+            exception: toError(installError)
         });
         if (isValidationError(installError)) throw installError;
         throwServerErrorWithContext(
@@ -81,11 +85,11 @@ function onOpen(): void {
             .addItem("Open Sidebar", "showSidebar")
             .addToUi();
     } catch (openError) {
-        const errorMessage = openError && openError.message ? openError.message : String(openError);
+        const errorMessage = getErrorMessage(openError);
         logEvent({
             message: `onOpen error: ${errorMessage}`,
             level: LogLevel.ERROR,
-            exception: openError
+            exception: toError(openError)
         });
 
         throwAlertMessageError(
@@ -97,19 +101,21 @@ function onOpen(): void {
     }
     throw new Error("Unreachable code in onOpen");
 }
-
-function showSidebar(): void {
+/**
+ * Called from SideBar.html via google.script.run
+ */
+export function showSidebar(): void {
     try {
         const sidebarHtml = HtmlService.createHtmlOutputFromFile("src/ui/Sidebar")
             .setTitle("Worksheet Refresher")
             .setWidth(320);
         SpreadsheetApp.getUi().showSidebar(sidebarHtml);
     } catch (sidebarError) {
-        const errorMessage = sidebarError && sidebarError.message ? sidebarError.message : String(sidebarError);
+        const errorMessage = getErrorMessage(sidebarError);
         logEvent({
             message: `showSidebar error: ${errorMessage}`,
             level: LogLevel.ERROR,
-            exception: sidebarError
+            exception: toError(sidebarError)
         });
 
         throwAlertMessageError(
@@ -122,18 +128,21 @@ function showSidebar(): void {
     throw new Error("Unreachable code in showSidebar");
 }
 
-function showHelpDocument() {
+/**
+ * Called from SideBar.html via google.script.run
+ */
+export function showHelpDocument() {
     try {
         const helpHtml = HtmlService.createHtmlOutputFromFile("src/ui/Help")
             .setWidth(760)
             .setHeight(640);
         SpreadsheetApp.getUi().showModalDialog(helpHtml, "Help");
     } catch (helpError) {
-        const errorMessage = helpError && helpError.message ? helpError.message : String(helpError);
+        const errorMessage = getErrorMessage(helpError);
         logEvent({
             message: `showHelpDocument error: ${errorMessage}`,
             level: LogLevel.ERROR,
-            exception: helpError
+            exception: toError(helpError)
         });
 
         throwAlertMessageError(
