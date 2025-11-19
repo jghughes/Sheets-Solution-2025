@@ -14,8 +14,8 @@ export enum LogLevel {
 export interface ILogEventOptions {
     message: string;
     level: LogLevel;
-    exception?: Error;
-    extraFields?: Record<string, any>;
+    exception?: Error | undefined;
+    extraFields?: Record<string, any> | undefined;
 }
 
 /**
@@ -37,9 +37,19 @@ export function logEvent(options: ILogEventOptions) {
     };
 
     if (exception) {
-        // If the exception has a toJson method, use it; otherwise, serialize standard Error
         if (typeof (exception as any).toJson === "function") {
-            Object.assign(logEntry, (exception as any).toJson());
+            const errorJson = (exception as any).toJson();
+            // Add error properties except context
+            Object.assign(logEntry, {
+                name: errorJson.name,
+                code: errorJson.code,
+                errorMessage: errorJson.message,
+                stack: errorJson.stack
+            });
+            // Flatten context properties into logEntry
+            if (errorJson.context && typeof errorJson.context === "object") {
+                Object.assign(logEntry, errorJson.context);
+            }
         } else {
             logEntry["exception"] = {
                 name: exception.name || "Error",
@@ -55,6 +65,7 @@ export function logEvent(options: ILogEventOptions) {
 
     logJson(logEntry);
 }
+
 
 /**
  * Internal: Outputs JSON log entry to Apps Script Logger or console.

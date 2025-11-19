@@ -1,4 +1,6 @@
-export class RiderStatsDisplayItem {
+import { IHasZwiftId } from "../interfaces/IHasZwiftId";
+
+export class RiderStatsDisplayItem implements IHasZwiftId {
     zwiftId = "";
     name = "";
     country = "";
@@ -46,7 +48,7 @@ export class RiderStatsDisplayItem {
     "30mW" = 0.0;
     "40mW" = 0.0;
     "60mW" = 0.0;
-    timestamp = new Date();
+    timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
 
     constructor(data?: Partial<RiderStatsDisplayItem>) {
         Object.assign(this, data);

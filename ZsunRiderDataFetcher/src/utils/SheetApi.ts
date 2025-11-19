@@ -1,29 +1,5 @@
-export interface ISheetApi {
-    sheetExists(name: string): boolean;
-    insertSheet(name: string): void;
-    deleteSheet(name: string): void;
-    renameSheet(oldName: string, newName: string): void;
-    clearSheet(name: string): void;
-    appendRow(name: string, row: any[]): void;
-    setValues(
-        name: string,
-        startRow: number,
-        startCol: number,
-        numRows: number,
-        numCols: number,
-        values: any[][]
-    ): void;
-    updateRow(name: string, rowIdx: number, values: any[]): void;
-    getRow(name: string, rowIdx: number): any[] | null;
-    getAllRows(name: string): any[][];
-    getColumn(name: string, colIdx: number): any[];
-    getSheetNames(): string[];
-    getCellValue(name: string, rowIdx: number, colIdx: number): any | null;
-    setCellValue(name: string, rowIdx: number, colIdx: number, value: any): void;
-    getSpreadsheetTimeZone(): string;
-}
-export class SheetApi implements ISheetApi {
-    private spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
+export class SheetApi {
+    private readonly spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
 
     constructor(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {
         this.spreadsheet = spreadsheet;
@@ -59,8 +35,8 @@ export class SheetApi implements ISheetApi {
 
     setValues(
         name: string,
-        startRow: number,
-        startCol: number,
+        startRow: number, // 1-based
+        startCol: number, // 1-based
         numRows: number,
         numCols: number,
         values: any[][]
@@ -74,14 +50,14 @@ export class SheetApi implements ISheetApi {
     updateRow(name: string, rowIdx: number, values: any[]): void {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            sheet.getRange(rowIdx + 1, 1, 1, values.length).setValues([values]);
+            sheet.getRange(rowIdx, 1, 1, values.length).setValues([values]);
         }
     }
 
     getRow(name: string, rowIdx: number): any[] | null {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            const range = sheet.getRange(rowIdx + 1, 1, 1, sheet.getLastColumn());
+            const range = sheet.getRange(rowIdx, 1, 1, sheet.getLastColumn());
             return range.getValues()[0];
         }
         return null;
@@ -104,8 +80,8 @@ export class SheetApi implements ISheetApi {
         if (sheet) {
             const lastRow = sheet.getLastRow();
             if (lastRow > 0) {
-                // colIdx is zero-based, Google Sheets is one-based
-                return sheet.getRange(1, colIdx + 1, lastRow, 1).getValues().map(row => row[0]);
+                // colIdx is 1-based
+                return sheet.getRange(1, colIdx, lastRow, 1).getValues().map(row => row[0]);
             }
         }
         return [];
@@ -118,8 +94,8 @@ export class SheetApi implements ISheetApi {
     getCellValue(name: string, rowIdx: number, colIdx: number): any | null {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            // Convert zero-based to one-based indices
-            const value = sheet.getRange(rowIdx + 1, colIdx + 1, 1, 1).getValue();
+            // rowIdx and colIdx are 1-based
+            const value = sheet.getRange(rowIdx, colIdx, 1, 1).getValue();
             return value;
         }
         return null;
@@ -128,7 +104,7 @@ export class SheetApi implements ISheetApi {
     setCellValue(name: string, rowIdx: number, colIdx: number, value: any): void {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            sheet.getRange(rowIdx + 1, colIdx + 1, 1, 1).setValue(value);
+            sheet.getRange(rowIdx, colIdx, 1, 1).setValue(value);
         }
     }
 
@@ -138,5 +114,85 @@ export class SheetApi implements ISheetApi {
         } catch (err) {
             return "Etc/UTC";
         }
+    }
+
+    // Row/Column Insert/Delete
+    insertRow(name: string, rowIdx: number): void {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.insertRows(rowIdx, 1);
+        }
+    }
+
+    deleteRow(name: string, rowIdx: number): void {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.deleteRow(rowIdx);
+        }
+    }
+
+    insertColumn(name: string, colIdx: number): void {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.insertColumns(colIdx, 1);
+        }
+    }
+
+    deleteColumn(name: string, colIdx: number): void {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.deleteColumn(colIdx);
+        }
+    }
+
+    // Range Operations
+    getRangeValues(
+        name: string,
+        startRow: number, // 1-based
+        startCol: number, // 1-based
+        numRows: number,
+        numCols: number
+    ): any[][] {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            return sheet.getRange(startRow, startCol, numRows, numCols).getValues();
+        }
+        return [];
+    }
+
+    setRangeValues(
+        name: string,
+        startRow: number, // 1-based
+        startCol: number, // 1-based
+        values: any[][]
+    ): void {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.getRange(startRow, startCol, values.length, values[0]?.length || 1).setValues(values);
+        }
+    }
+
+    /**
+     * Updates a contiguous range of rows in the specified sheet.
+     * @param name - The name of the sheet.
+     * @param startRow - The 1-based index of the first row to update.
+     * @param rows - An array of row arrays, each representing the values for a row.
+     *               Each row must have the same number of columns.
+     */
+    updateContiguousRows(name: string, startRow: number, rows: any[][]): void {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (!sheet || rows.length === 0) return;
+        const numRows = rows.length;
+        const numCols = rows[0].length;
+        sheet.getRange(startRow, 1, numRows, numCols).setValues(rows);
+    }
+
+    /**
+     * Returns the last row with data in the specified sheet.
+     * @param name - The name of the sheet.
+     */
+    getLastRow(name: string): number {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        return sheet ? sheet.getLastRow() : 0;
     }
 }

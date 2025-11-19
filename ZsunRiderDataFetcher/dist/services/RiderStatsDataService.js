@@ -35,13 +35,12 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchRiderStatsItemsFromUrl = fetchRiderStatsItemsFromUrl;
 const ErrorUtils = __importStar(require("../utils/ErrorUtils"));
-const FileUtils = __importStar(require("../utils/FileUtils"));
+const HttpUtils_1 = require("../utils/HttpUtils");
 const RiderStatsDto_1 = require("../models/RiderStatsDto");
 const RiderStatsItem_1 = require("../models/RiderStatsItem");
 function fetchRiderStatsItemsFromUrl(url) {
-    FileUtils.throwIfNoConnection();
-    const text = FileUtils.readFileFromUrl(url);
-    // Parse the JSON text to an array of objects
+    (0, HttpUtils_1.throwIfNoConnection)();
+    const text = (0, HttpUtils_1.fetchTextFileFromUrl)(url);
     let jsonArray = [];
     try {
         jsonArray = JSON.parse(text);
@@ -53,7 +52,6 @@ function fetchRiderStatsItemsFromUrl(url) {
         ErrorUtils.throwValidationError(ErrorUtils.validationErrorCode.invalidFileFormat, "File content is not a valid JSON array.", "fetchFromUrlJsonArrayOfRiderStatsDtoAndMapToArrayOfRiderStatsItem", url);
         return []; // Ensure function does not continue
     }
-    // Improved error handling for DTO conversion
     let dtoArray;
     try {
         dtoArray = RiderStatsDto_1.RiderStatsDto.fromJsonArray(jsonArray);
@@ -62,7 +60,6 @@ function fetchRiderStatsItemsFromUrl(url) {
         ErrorUtils.throwValidationError(ErrorUtils.validationErrorCode.invalidFileFormat, "Failed to convert JSON array to RiderStatsDto array.", "fetchRiderStatsItemsFromUrl", url);
         return []; // Ensure function does not continue
     }
-    // Improved error handling for mapping to RiderStatsItem
     let answer;
     try {
         answer = RiderStatsItem_1.RiderStatsItem.fromDtoArray(dtoArray);

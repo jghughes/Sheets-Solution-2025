@@ -20,7 +20,7 @@
     "sourceMap": true,
     "strict": true,
     "target": "ES2019",
-    "types": [ "google-apps-script" ]
+    "types": [ "google-apps-script", "jest", "node" ]
   },
-  "include": ["src/**/*"]
+  "include": [ "src/**/*", "tests/**/*" ]
 }

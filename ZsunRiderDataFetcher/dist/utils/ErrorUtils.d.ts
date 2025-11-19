@@ -3,9 +3,9 @@
  * Allows extensibility for additional error metadata.
  */
 export interface IErrorContext {
-    operationName?: string;
-    callsite?: string;
-    errorCode?: string;
+    operationName?: string | undefined;
+    callsite?: string | undefined;
+    errorCode?: string | undefined;
     details?: any;
     [key: string]: any;
 }

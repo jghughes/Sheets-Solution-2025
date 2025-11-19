@@ -1,0 +1,52 @@
+import { IHasZwiftId } from "./IHasZwiftId";
+
+// DTO interface for type safety
+export interface IRiderStatsDto extends IHasZwiftId {
+    fullName: string;
+    zwiftCountryCode3: string;
+    ageYears: number;
+    heightCm: number;
+    weightKg: number;
+    genderCode: string;
+    catOpen: string;
+    catWomen: string;
+    zwiftRacingScore: number;
+    zwiftWattsFtp: number;
+    zwiftWattsZFtp: number;
+    zwiftWattsKgZFtp: number;
+    zwiftCatLabel: string;
+    veloAgeGroup: string;
+    veloCatNum30Days: number;
+    veloCatName30Days: string;
+    veloRating30Days: number;
+    veloCatLabel: string;
+    wkg05Sec: number;
+    wkg15Sec: number;
+    wkg30Sec: number;
+    wkg01Min: number;
+    wkg02Min: number;
+    wkg03Min: number;
+    wkg05Min: number;
+    wkg10Min: number;
+    wkg12Min: number;
+    wkg15Min: number;
+    wkg20Min: number;
+    wkg30Min: number;
+    wkg40Min: number;
+    wkg60MinCurveFit: number;
+    w05Sec: number;
+    w15Sec: number;
+    w30Sec: number;
+    w01Min: number;
+    w02Min: number;
+    w03Min: number;
+    w05Min: number;
+    w10Min: number;
+    w12Min: number;
+    w15Min: number;
+    w20Min: number;
+    w30Min: number;
+    w40Min: number;
+    w60MinCurveFit: number;
+    timestamp: string; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
+}

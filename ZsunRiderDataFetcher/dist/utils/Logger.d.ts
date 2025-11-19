@@ -12,8 +12,8 @@ export declare enum LogLevel {
 export interface ILogEventOptions {
     message: string;
     level: LogLevel;
-    exception?: Error;
-    extraFields?: Record<string, any>;
+    exception?: Error | undefined;
+    extraFields?: Record<string, any> | undefined;
 }
 /**
  * Logs an event with a specified level, message, optional exception, and extra fields.

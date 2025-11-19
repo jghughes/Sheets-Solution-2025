@@ -52,7 +52,7 @@ class RiderStatsItem {
         this.w30Min = 0.0;
         this.w40Min = 0.0;
         this.w60MinCurveFit = 0.0;
-        this.timestamp = "";
+        this.timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
         Object.assign(this, data);
     }
     static toDataTransferObject(item) {
@@ -130,7 +130,7 @@ class RiderStatsItem {
         display["30mW"] = item.w30Min;
         display["40mW"] = item.w40Min;
         display["60mW"] = item.w60MinCurveFit;
-        display.timestamp = item.timestamp ? new Date(item.timestamp) : null;
+        display.timestamp = item.timestamp; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
         return display;
     }
     static toDisplayItemArray(items) {
@@ -138,7 +138,7 @@ class RiderStatsItem {
             return [];
         return items.map(item => RiderStatsItem.toDisplayItem(item));
     }
-    static toDisplayItemDictionary(items) {
+    toDisplayItemDictionary(items) {
         const dict = {};
         if (!Array.isArray(items))
             return dict;

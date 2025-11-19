@@ -52,7 +52,7 @@ const aliasMap = {
     w_60min_curvefit: "w60MinCurveFit",
     timestamp: "timestamp"
 };
-// Main class with defaults, alias support, and roundtripping
+// Main class with defaults, alias support, and round-tripping
 class RiderStatsDto {
     constructor(data) {
         this.zwiftId = "";
@@ -102,7 +102,7 @@ class RiderStatsDto {
         this.w30Min = 0.0;
         this.w40Min = 0.0;
         this.w60MinCurveFit = 0.0;
-        this.timestamp = "";
+        this.timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
         Object.assign(this, data);
     }
     // Deserialize from JSON with alias support

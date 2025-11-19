@@ -3,13 +3,12 @@
  * Allows extensibility for additional error metadata.
  */
 export interface IErrorContext {
-    operationName?: string;
-    callsite?: string;
-    errorCode?: string;
+    operationName?: string | undefined;
+    callsite?: string | undefined;
+    errorCode?: string | undefined;
     details?: any;
-    [key: string]: any; // extensibility
+    [key: string]: any;
 }
-
 /**
  * Object-based error codes for validation errors.
  * Used to categorize and identify validation error types.

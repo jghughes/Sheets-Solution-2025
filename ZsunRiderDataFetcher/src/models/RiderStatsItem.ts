@@ -1,7 +1,9 @@
 import { RiderStatsDto } from "./RiderStatsDto";
 import { RiderStatsDisplayItem } from "./RiderStatsDisplayItem";
+import { IHasZwiftId } from "../interfaces/IHasZwiftId";
 
-export class RiderStatsItem {
+
+export class RiderStatsItem implements IHasZwiftId {
     zwiftId = "";
     fullName = "";
     zwiftCountryCode3 = "";
@@ -49,7 +51,7 @@ export class RiderStatsItem {
     w30Min = 0.0;
     w40Min = 0.0;
     w60MinCurveFit = 0.0;
-    timestamp = "";
+    timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
 
     constructor(data?: Partial<RiderStatsItem>) {
         Object.assign(this, data);
@@ -133,7 +135,7 @@ export class RiderStatsItem {
     display["30mW"] = item.w30Min;
     display["40mW"] = item.w40Min;
     display["60mW"] = item.w60MinCurveFit;
-    display.timestamp = item.timestamp ? new Date(item.timestamp) : null;
+    display.timestamp = item.timestamp; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
 
     return display;
     }
@@ -143,7 +145,7 @@ export class RiderStatsItem {
         return items.map(item => RiderStatsItem.toDisplayItem(item));
     }
 
-    static toDisplayItemDictionary(items: RiderStatsDisplayItem[]): { [zwiftId: string]: RiderStatsDisplayItem } {
+    toDisplayItemDictionary(items: RiderStatsDisplayItem[]): { [zwiftId: string]: RiderStatsDisplayItem } {
         const dict: { [zwiftId: string]: RiderStatsDisplayItem } = {};
         if (!Array.isArray(items)) return dict;
         for (const item of items) {

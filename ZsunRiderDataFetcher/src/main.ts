@@ -1,18 +1,16 @@
 import {
     throwAlertMessageError,
-    throwValidationError,
     throwServerErrorWithContext,
     isValidationError,
     serverErrorCode,
     alertMessageErrorCode,
-    validationErrorCode
 } from "./utils/ErrorUtils";
 import { printAlertOrError } from "./utils/UserFeedbackUtils";
 import { fetchRiderStatsItemsFromUrl } from "./services/RiderStatsDataService";
 import { RiderStatsItem } from "./models/RiderStatsItem";
 import { logEvent, LogLevel } from "./utils/Logger";
-import { ISheetApi, SheetApi } from "./utils/SheetApi";
-import { writeAllRecordsToSheet, writeItemisedRecordsToSheet } from "./utils/SheetUtils";
+import { SheetApi } from "./utils/SheetApi";
+import { writeSheetRowsByZwiftId, updateSheetRowsByZwiftId } from "./utils/SheetRowUtils";
 import { defaultSourceUrlForRidersOnAzure } from "../storageConfig";
 
 /**
@@ -29,10 +27,12 @@ export function importRidersFromUrl(): string {
 
         const riderStatsDisplayItems = RiderStatsItem.toDisplayItemArray(riderStatsRecords);
 
-        writeAllRecordsToSheet(sheetApiInstance, "Dump", riderStatsDisplayItems);
-        writeItemisedRecordsToSheet(sheetApiInstance, "Squad", riderStatsDisplayItems);
+        writeSheetRowsByZwiftId(sheetApiInstance, "Dump", riderStatsDisplayItems);
+
+        updateSheetRowsByZwiftId(sheetApiInstance, "Squad", riderStatsDisplayItems);
 
         return `Downloaded ${riderStatsRecords.length} records from URL. Sheets were refreshed.`;
+
     } catch (importError) {
         const errorMessage = importError && importError.message ? importError.message : String(importError);
         logEvent({
@@ -47,9 +47,6 @@ export function importRidersFromUrl(): string {
             "importRidersFromUrl",
             "importRidersFromUrl"
         );
-        printAlertOrError(importError);
-
-        return "";
     }
     throw new Error("Unreachable code in importRidersFromUrl");
 }
@@ -97,9 +94,6 @@ function onOpen(): void {
             "onOpen",
             "onOpen"
         );
-        printAlertOrError(openError);
-
-        return;
     }
     throw new Error("Unreachable code in onOpen");
 }
@@ -124,9 +118,6 @@ function showSidebar(): void {
             "showSidebar",
             "showSidebar"
         );
-        printAlertOrError(sidebarError);
-
-        return;
     }
     throw new Error("Unreachable code in showSidebar");
 }
@@ -151,9 +142,6 @@ function showHelpDocument() {
             "showHelpDocument",
             "showHelpDocument"
         );
-        printAlertOrError(helpError);
-
-        return;
     }
     throw new Error("Unreachable code in showHelpDocument");
 }

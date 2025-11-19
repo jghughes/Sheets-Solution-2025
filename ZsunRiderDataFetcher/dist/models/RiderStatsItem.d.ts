@@ -1,6 +1,7 @@
 import { RiderStatsDto } from "./RiderStatsDto";
 import { RiderStatsDisplayItem } from "./RiderStatsDisplayItem";
-export declare class RiderStatsItem {
+import { IHasZwiftId } from "./IHasZwiftId";
+export declare class RiderStatsItem implements IHasZwiftId {
     zwiftId: string;
     fullName: string;
     zwiftCountryCode3: string;
@@ -56,7 +57,7 @@ export declare class RiderStatsItem {
     static toDtoArray(items: RiderStatsItem[]): RiderStatsDto[];
     static toDisplayItem(item: RiderStatsItem | null): RiderStatsDisplayItem;
     static toDisplayItemArray(items: RiderStatsItem[]): RiderStatsDisplayItem[];
-    static toDisplayItemDictionary(items: RiderStatsDisplayItem[]): {
+    toDisplayItemDictionary(items: RiderStatsDisplayItem[]): {
         [zwiftId: string]: RiderStatsDisplayItem;
     };
 }

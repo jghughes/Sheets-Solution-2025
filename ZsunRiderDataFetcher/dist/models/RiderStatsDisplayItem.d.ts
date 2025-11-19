@@ -1,4 +1,5 @@
-export declare class RiderStatsDisplayItem {
+import { IHasZwiftId } from "./IHasZwiftId";
+export declare class RiderStatsDisplayItem implements IHasZwiftId {
     zwiftId: string;
     name: string;
     country: string;
@@ -46,7 +47,7 @@ export declare class RiderStatsDisplayItem {
     "30mW": number;
     "40mW": number;
     "60mW": number;
-    timestamp: Date;
+    timestamp: string;
     constructor(data?: Partial<RiderStatsDisplayItem>);
 }
 //# sourceMappingURL=RiderStatsDisplayItem.d.ts.map

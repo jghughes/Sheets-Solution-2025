@@ -1,15 +1,14 @@
 import * as ErrorUtils from "../utils/ErrorUtils";
-import * as FileUtils from "../utils/FileUtils";
+import { fetchTextFileFromUrl, throwIfNoConnection } from "../utils/HttpUtils";
 import { RiderStatsDto as RiderStatsDto } from "../models/RiderStatsDto";
 import { RiderStatsItem as RiderStatsItem } from "../models/RiderStatsItem";
 
 export function fetchRiderStatsItemsFromUrl(
     url: string): RiderStatsItem[] {
 
-    FileUtils.throwIfNoConnection();
-    const text = FileUtils.readFileFromUrl(url);
+    throwIfNoConnection();
+    const text = fetchTextFileFromUrl(url);
 
-    // Parse the JSON text to an array of objects
     let jsonArray: Record<string, any>[] = [];
     try {
         jsonArray = JSON.parse(text);
@@ -26,7 +25,6 @@ export function fetchRiderStatsItemsFromUrl(
         return []; // Ensure function does not continue
     }
 
-    // Improved error handling for DTO conversion
     let dtoArray: RiderStatsDto[];
     try {
         dtoArray = RiderStatsDto.fromJsonArray(jsonArray);
@@ -40,7 +38,6 @@ export function fetchRiderStatsItemsFromUrl(
         return []; // Ensure function does not continue
     }
 
-    // Improved error handling for mapping to RiderStatsItem
     let answer: RiderStatsItem[];
     try {
         answer = RiderStatsItem.fromDtoArray(dtoArray);

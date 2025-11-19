@@ -50,7 +50,7 @@ class RiderStatsDisplayItem {
         this["30mW"] = 0.0;
         this["40mW"] = 0.0;
         this["60mW"] = 0.0;
-        this.timestamp = new Date();
+        this.timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
         Object.assign(this, data);
     }
 }

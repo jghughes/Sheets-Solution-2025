@@ -31,7 +31,9 @@ class SheetApi {
         if (sheet)
             sheet.appendRow(row);
     }
-    setValues(name, startRow, startCol, numRows, numCols, values) {
+    setValues(name, startRow, // 1-based
+    startCol, // 1-based
+    numRows, numCols, values) {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
             sheet.getRange(startRow, startCol, numRows, numCols).setValues(values);
@@ -40,13 +42,13 @@ class SheetApi {
     updateRow(name, rowIdx, values) {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            sheet.getRange(rowIdx + 1, 1, 1, values.length).setValues([values]);
+            sheet.getRange(rowIdx, 1, 1, values.length).setValues([values]);
         }
     }
     getRow(name, rowIdx) {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            const range = sheet.getRange(rowIdx + 1, 1, 1, sheet.getLastColumn());
+            const range = sheet.getRange(rowIdx, 1, 1, sheet.getLastColumn());
             return range.getValues()[0];
         }
         return null;
@@ -67,8 +69,8 @@ class SheetApi {
         if (sheet) {
             const lastRow = sheet.getLastRow();
             if (lastRow > 0) {
-                // colIdx is zero-based, Google Sheets is one-based
-                return sheet.getRange(1, colIdx + 1, lastRow, 1).getValues().map(row => row[0]);
+                // colIdx is 1-based
+                return sheet.getRange(1, colIdx, lastRow, 1).getValues().map(row => row[0]);
             }
         }
         return [];
@@ -79,8 +81,8 @@ class SheetApi {
     getCellValue(name, rowIdx, colIdx) {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            // Convert zero-based to one-based indices
-            const value = sheet.getRange(rowIdx + 1, colIdx + 1, 1, 1).getValue();
+            // rowIdx and colIdx are 1-based
+            const value = sheet.getRange(rowIdx, colIdx, 1, 1).getValue();
             return value;
         }
         return null;
@@ -88,7 +90,7 @@ class SheetApi {
     setCellValue(name, rowIdx, colIdx, value) {
         const sheet = this.spreadsheet.getSheetByName(name);
         if (sheet) {
-            sheet.getRange(rowIdx + 1, colIdx + 1, 1, 1).setValue(value);
+            sheet.getRange(rowIdx, colIdx, 1, 1).setValue(value);
         }
     }
     getSpreadsheetTimeZone() {
@@ -98,6 +100,73 @@ class SheetApi {
         catch (err) {
             return "Etc/UTC";
         }
+    }
+    // Row/Column Insert/Delete
+    insertRow(name, rowIdx) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.insertRows(rowIdx, 1);
+        }
+    }
+    deleteRow(name, rowIdx) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.deleteRow(rowIdx);
+        }
+    }
+    insertColumn(name, colIdx) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.insertColumns(colIdx, 1);
+        }
+    }
+    deleteColumn(name, colIdx) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.deleteColumn(colIdx);
+        }
+    }
+    // Range Operations
+    getRangeValues(name, startRow, // 1-based
+    startCol, // 1-based
+    numRows, numCols) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            return sheet.getRange(startRow, startCol, numRows, numCols).getValues();
+        }
+        return [];
+    }
+    setRangeValues(name, startRow, // 1-based
+    startCol, // 1-based
+    values) {
+        var _a;
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (sheet) {
+            sheet.getRange(startRow, startCol, values.length, ((_a = values[0]) === null || _a === void 0 ? void 0 : _a.length) || 1).setValues(values);
+        }
+    }
+    /**
+     * Updates a contiguous range of rows in the specified sheet.
+     * @param name - The name of the sheet.
+     * @param startRow - The 1-based index of the first row to update.
+     * @param rows - An array of row arrays, each representing the values for a row.
+     *               Each row must have the same number of columns.
+     */
+    updateContiguousRows(name, startRow, rows) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        if (!sheet || rows.length === 0)
+            return;
+        const numRows = rows.length;
+        const numCols = rows[0].length;
+        sheet.getRange(startRow, 1, numRows, numCols).setValues(rows);
+    }
+    /**
+     * Returns the last row with data in the specified sheet.
+     * @param name - The name of the sheet.
+     */
+    getLastRow(name) {
+        const sheet = this.spreadsheet.getSheetByName(name);
+        return sheet ? sheet.getLastRow() : 0;
     }
 }
 exports.SheetApi = SheetApi;

@@ -26,9 +26,19 @@ function logEvent(options) {
         message
     };
     if (exception) {
-        // If the exception has a toJson method, use it; otherwise, serialize standard Error
         if (typeof exception.toJson === "function") {
-            Object.assign(logEntry, exception.toJson());
+            const errorJson = exception.toJson();
+            // Add error properties except context
+            Object.assign(logEntry, {
+                name: errorJson.name,
+                code: errorJson.code,
+                errorMessage: errorJson.message,
+                stack: errorJson.stack
+            });
+            // Flatten context properties into logEntry
+            if (errorJson.context && typeof errorJson.context === "object") {
+                Object.assign(logEntry, errorJson.context);
+            }
         }
         else {
             logEntry["exception"] = {

@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.2752196">
   <ItemGroup>
     <Folder Include="dist\" />
-    <Folder Include="tests\" />
+    <Folder Include="dist\models\" />
+    <Folder Include="dist\services\" />
+    <Folder Include="dist\utils\" />
+    <Folder Include="tests\ui\" />
+    <Folder Include="tests\utils\http-utils\" />
   </ItemGroup>
 </Project>
