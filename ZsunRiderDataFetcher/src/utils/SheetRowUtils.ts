@@ -12,16 +12,15 @@ import {
 import { toZwiftIdDictionary } from "./CollectionUtils";
 import { logEvent, LogLevel } from "./Logger";
 import { SheetApi } from "./SheetApi";
-import { IHasZwiftId } from "../interfaces/IHasZwiftId";
-
+import { ZwiftIdBase } from "../models/ZwiftIdBase";
 
 /**
- * Writes an array of items implementing IHasZwiftId to a specified sheet.
+ * Writes an array of items implementing ZwiftIdBase to a specified sheet.
  * @param sheetApi - Instance for sheet operations.
  * @param sheetName - Name of the sheet to write to.
- * @param records - Array of items implementing IHasZwiftId.
+ * @param records - Array of items implementing ZwiftIdBase.
  */
-export function writeSheetRowsByZwiftId<T extends IHasZwiftId>(
+export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
     sheetApi: SheetApi,
     sheetName: string,
     records: T[],
@@ -61,8 +60,8 @@ export function writeSheetRowsByZwiftId<T extends IHasZwiftId>(
                 continue;
             }
             const rowValues = propertyNames.map(propertyName => {
-                const value = (record && record[propertyName as keyof IHasZwiftId] !== undefined)
-                    ? record[propertyName as keyof IHasZwiftId]
+                const value = (record && record[propertyName as keyof ZwiftIdBase] !== undefined)
+                    ? record[propertyName as keyof ZwiftIdBase]
                     : "";
                 if (typeof value === "number") return value;
                 if (typeof value === "string") return value;
@@ -115,15 +114,15 @@ export function writeSheetRowsByZwiftId<T extends IHasZwiftId>(
 }
 
 /**
- * Updates the specified sheet with items implementing IHasZwiftId.
+ * Updates the specified sheet with items implementing ZwiftIdBase.
  * Overwrites rows where the first cell matches a zwiftId in the items.
  * Uses batch update for efficiency.
  * @param sheetApi - Instance for sheet operations.
  * @param sheetName - Name of the sheet to update.
- * @param items - Array of items implementing IHasZwiftId.
+ * @param items - Array of items implementing ZwiftIdBase.
  * @param maxRowLimit - Maximum number of rows to process.
  */
-export function updateSheetRowsByZwiftId<T extends IHasZwiftId>(
+export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
     sheetApi: SheetApi,
     sheetName: string,
     items: T[],
@@ -172,8 +171,8 @@ export function updateSheetRowsByZwiftId<T extends IHasZwiftId>(
         if (!matchingRecord) continue; // Guard against undefined
 
         const updatedRow = propertyNames.map(propertyName =>
-            matchingRecord[propertyName as keyof IHasZwiftId] !== undefined
-                ? matchingRecord[propertyName as keyof IHasZwiftId]
+            matchingRecord[propertyName as keyof ZwiftIdBase] !== undefined
+                ? matchingRecord[propertyName as keyof ZwiftIdBase]
                 : ""
         );
 

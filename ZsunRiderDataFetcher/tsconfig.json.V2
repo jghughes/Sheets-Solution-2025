@@ -20,8 +20,8 @@
     "sourceMap": true,
     "strict": true,
     "target": "ES2019",
-    "types": [ "google-apps-script"]
+    "types": [ "google-apps-script" ]
   },
   "include": [ "src/**/*" ],
-  "exclude": [ "tests", "**/*.test.ts", "**/*.spec.ts", "src/interfaces", "src/types" ]
+  "exclude": [ "tests", "**/*.test.ts", "**/*.spec.ts", "src/interfaces" ]
 }

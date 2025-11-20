@@ -2,8 +2,6 @@ import {
     throwAlertMessageError,
     throwServerErrorWithContext,
     isValidationError,
-    serverErrorCode,
-    alertMessageErrorCode,
     getErrorMessage,
     toError
 } from "./utils/ErrorUtils";

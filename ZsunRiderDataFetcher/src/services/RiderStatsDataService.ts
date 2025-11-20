@@ -3,6 +3,10 @@ import { fetchTextFileFromUrl, throwIfNoConnection } from "../utils/HttpUtils";
 import { RiderStatsDto as RiderStatsDto } from "../models/RiderStatsDto";
 import { RiderStatsItem as RiderStatsItem } from "../models/RiderStatsItem";
 
+const invalidFileFormat = "invalid_file_format";
+const methodName = "fetchRiderStatsItemsFromUrl";
+
+
 export function fetchRiderStatsItemsFromUrl(
     url: string): RiderStatsItem[] {
 
@@ -17,9 +21,9 @@ export function fetchRiderStatsItemsFromUrl(
         }
     } catch (err) {
         ErrorUtils.throwValidationError(
-            ErrorUtils.validationErrorCode.invalidFileFormat,
+            invalidFileFormat,
             `File content is not a valid JSON array. ${ErrorUtils.getErrorMessage(err)}`,
-            "fetchFromUrlJsonArrayOfRiderStatsDtoAndMapToArrayOfRiderStatsItem",
+            methodName,
             url,
             { exception: ErrorUtils.toError(err) }
         );
@@ -31,9 +35,9 @@ export function fetchRiderStatsItemsFromUrl(
         dtoArray = RiderStatsDto.fromJsonArray(jsonArray);
     } catch (err) {
         ErrorUtils.throwValidationError(
-            ErrorUtils.validationErrorCode.invalidFileFormat,
+            invalidFileFormat,
             `Failed to convert JSON array to RiderStatsDto array. ${ErrorUtils.getErrorMessage(err)}`,
-            "fetchRiderStatsItemsFromUrl",
+            methodName,
             url,
             { exception: ErrorUtils.toError(err) }
         );
@@ -45,9 +49,9 @@ export function fetchRiderStatsItemsFromUrl(
         answer = RiderStatsItem.fromDtoArray(dtoArray);
     } catch (err) {
         ErrorUtils.throwValidationError(
-            ErrorUtils.validationErrorCode.invalidFileFormat,
+           invalidFileFormat,
             `Failed to map RiderStatsDto array to RiderStatsItem array. ${ErrorUtils.getErrorMessage(err)}`,
-            "fetchRiderStatsItemsFromUrl",
+            methodName,
             url,
             { exception: ErrorUtils.toError(err) }
         );

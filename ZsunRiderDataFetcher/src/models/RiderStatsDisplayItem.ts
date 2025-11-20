@@ -1,7 +1,6 @@
-import { IHasZwiftId } from "../interfaces/IHasZwiftId";
+import { ZwiftIdBase } from "./ZwiftIdBase";
 
-export class RiderStatsDisplayItem implements IHasZwiftId {
-    zwiftId = "";
+export class RiderStatsDisplayItem extends ZwiftIdBase {
     name = "";
     country = "";
     age = 0.0;
@@ -51,6 +50,7 @@ export class RiderStatsDisplayItem implements IHasZwiftId {
     timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
 
     constructor(data?: Partial<RiderStatsDisplayItem>) {
+        super();
         Object.assign(this, data);
     }
 }

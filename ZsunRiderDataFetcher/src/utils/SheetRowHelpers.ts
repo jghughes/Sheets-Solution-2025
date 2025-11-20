@@ -4,8 +4,7 @@ import {
 } from "./ErrorUtils";
 import { logEvent, LogLevel } from "./Logger";
 import { SheetApi } from "./SheetApi";
-import { IHasZwiftId } from "../interfaces/IHasZwiftId";
-
+import { ZwiftIdBase } from "../models/ZwiftIdBase";
 /**
  * Ensures the sheet exists. If not, inserts it. Optionally clears the sheet.
  * @param sheetApi - Instance for sheet operations.
@@ -52,7 +51,7 @@ export function logApiError(message: string, error: any, sheetName: string, oper
  * Gets property names from the first record, moving zwiftId to the front if present.
  * @param records - Array of items implementing IHasZwiftId.
  */
-export function getPropertyNames<T extends IHasZwiftId>(records: T[]): string[] {
+export function getPropertyNames<T extends ZwiftIdBase>(records: T[]): string[] {
     if (!records || records.length === 0 || typeof records[0] !== "object" || records[0] === null) return [];
     const propertyNames = Object.keys(records[0]);
     const zwiftIdIndex = propertyNames.indexOf("zwiftId");

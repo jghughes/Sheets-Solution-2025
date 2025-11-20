@@ -1,5 +1,4 @@
-import { IHasZwiftId } from "../interfaces/IHasZwiftId";
-import { IRiderStatsDto } from "../interfaces/IRiderStatsDto";
+import { ZwiftIdBase } from "./ZwiftIdBase";
 
 // Alias map: JSON field name -> class property name
 const aliasMap: Record<string, keyof RiderStatsDto> = {
@@ -54,8 +53,7 @@ const aliasMap: Record<string, keyof RiderStatsDto> = {
 };
 
 // Main class with defaults, alias support, and round-tripping
-export class RiderStatsDto implements IHasZwiftId, IRiderStatsDto {
-    zwiftId = "";
+export class RiderStatsDto extends ZwiftIdBase {
     fullName = "";
     zwiftCountryCode3 = "";
     ageYears = 0.0;
@@ -105,6 +103,7 @@ export class RiderStatsDto implements IHasZwiftId, IRiderStatsDto {
     timestamp = ""; // formatted ISO 8601 string, e.g., '2025-08-15T12:34:56.789Z'
 
     constructor(data?: Partial<RiderStatsDto>) {
+        super();
         Object.assign(this, data);
     }
 
