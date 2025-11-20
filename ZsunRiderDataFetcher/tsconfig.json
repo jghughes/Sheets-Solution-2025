@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "allowJs": true,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "esModuleInterop": true,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
@@ -23,5 +23,5 @@
     "types": [ "google-apps-script", "jest", "node" ]
   },
   "include": [ "src/**/*" ],
-  "exclude": [ "tests", "**/*.test.ts", "**/*.spec.ts" ]
+  "exclude": [ "tests", "**/*.test.ts", "**/*.spec.ts", "src/interfaces" ]
 }

@@ -55,7 +55,15 @@ export function importRidersFromUrl(): string {
     throw new Error("Unreachable code in importRidersFromUrl");
 }
 
-// --- Existing entry points ---
+/**
+ * Runs when the add-on is installed.
+ *
+ * @param {object} e The event parameter for a simple onInstall trigger (not used here). To
+ *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
+ *     running in, inspect e.authMode. (In practice, onInstall triggers always
+ *     run in AuthMode.FULL, but onOpen triggers may be AuthMode.LIMITED or
+ *     AuthMode.NONE.)
+ */
 export function onInstall(): void {
     try {
         onOpen();
@@ -78,10 +86,17 @@ export function onInstall(): void {
     throw new Error("Unreachable code in onInstall");
 }
 
+/**
+ * Creates a menu entry in the Google Docs UI when the document is opened.
+ *
+ * @param {object} e The event parameter for a simple onOpen trigger. To
+ *     determine which authorization mode (ScriptApp.AuthMode) the trigger is
+ *     running in, inspect e.authMode.
+ */
 function onOpen(): void {
     try {
         const spreadsheetUi = SpreadsheetApp.getUi();
-        spreadsheetUi.createMenu("ZSUN Worksheet")
+        spreadsheetUi.createMenu("Rider Stats")
             .addItem("Open Sidebar", "showSidebar")
             .addToUi();
     } catch (openError) {
@@ -102,12 +117,13 @@ function onOpen(): void {
     throw new Error("Unreachable code in onOpen");
 }
 /**
+ * Opens a sidebar in the document containing the add-on user interface.
  * Called from SideBar.html via google.script.run
  */
 export function showSidebar(): void {
     try {
         const sidebarHtml = HtmlService.createHtmlOutputFromFile("src/ui/Sidebar")
-            .setTitle("Worksheet Refresher")
+            .setTitle("Refresh stats")
             .setWidth(320);
         SpreadsheetApp.getUi().showSidebar(sidebarHtml);
     } catch (sidebarError) {
