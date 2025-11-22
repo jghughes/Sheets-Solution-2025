@@ -1,0 +1,59 @@
+Start of prompt:
+
+Context
+I am developing a Google Workspace Apps Script project to serve as an add-in for Google Sheets. My environment is Windows, using Visual Studio 2022 with Resharper and ESLint. The codebase contains both JavaScript and TypeScript files and HTML and CSS files. The code must be compatible with modern Google Apps Script (GAS), support static type checking and refactoring in Visual Studio 2022, and work with npm/Clasp for deployment. All code is bundled and flattened for Apps Script using tsc and esbuild. The development environment is VS2022. the project template is Typescript. JEST is used for testing. The TS compiler is used to convert from TS to JS. ESBUILD is used to transpile to flattened apps-script. CLASP is used to deploy a to a google workspace sheets add-on.
+
+TypeScript Features and Coding Requirements for Google Apps Script Compatibility
+
+- Use ES6 class syntax with extends for inheritance. All methods must be defined within the class body (do not use prototype methods).
+- You may use import/export/module syntax in TypeScript source files for maintainability and modularity. The build process (tsc then esbuild) must flatten and remove all module boundaries before deployment.
+- TypeScript interfaces, generics, and type aliases are allowed in source code. They are erased by tsc and will not appear in the final JavaScript.
+- Avoid using enums unless you use const enums or are certain your usage is compatible with Apps Script, as regular enums emit JavaScript code.
+- Do not use async, await, Promises, or generator functions in any code intended for Apps Script, as these are not supported by the V8 runtime.
+- Do not use Map, Set, WeakMap, WeakSet, Proxy, Symbol, Reflect, BigInt, or any ES6+ built-in objects not supported by Google Apps Script V8.
+- Do not use decorators, mixins, or any experimental TypeScript or JavaScript features.
+- Do not use nullish coalescing (??), optional chaining (?.), or object or array methods not supported by GAS (such as Array.prototype.flatMap, Object.fromEntries).
+- Do not use default parameter values or parameter destructuring in function signatures.
+- Do not use external type definitions that reference Node.js, browser APIs, or any non-GAS environment.
+- Do not use global variables unless absolutely necessary; encapsulate state within functions or classes.
+- Do not use any code or dependencies that require a bundler polyfill or shimming for unsupported features.
+- Target ES2019 in your TypeScript configuration, as supported by Google Apps Script V8 runtime.
+- Use only the following modern JavaScript features, as supported by GAS V8: let, const, template literals, destructuring (in assignments), simple classes, enhanced object literals, spread/rest (where supported), and for...of loops.
+- All code must be compatible with strict type checking as configured in tsconfig.json and must not produce errors or warnings in ESLint or Resharper.
+- Do not include any dependencies in package.json that are not required for type checking, linting, testing, or building for Apps Script deployment.
+
+Unit Testing Readiness Requirements
+
+- Use dependency injection for all external services and Google Apps Script APIs to enable mocking and isolation in tests.
+- Write pure functions wherever possible, minimizing reliance on global state and side effects.
+- Separate business logic from direct Google Apps Script API calls; encapsulate GAS interactions in dedicated service classes or functions.
+- Define TypeScript interfaces and generics for dependencies in test code to facilitate mocking and type safety.
+- Avoid hard-coded values; use parameters, configuration objects, or environment variables to enable flexible and testable code.
+- Structure code as small, focused, and reusable functions to improve testability and maintainability.
+- Place all test files in clearly named test files (such as *.test.ts or *.spec.ts) and ensure they are excluded from production builds and deployment.
+- Ensure all test code and mocks do not use features or dependencies disallowed by your tsconfig.json or eslint.config.js (for example, no async/await, no Node.js or browser-specific APIs).
+- Use only dependencies declared in package.json for testing, linting, and type checking; do not introduce unnecessary or conflicting packages.
+- Ensure all testable code is compatible with strict type checking and linting rules as configured in tsconfig.json and eslint.config.js.
+- Where feasible, structure code to allow importing functions for testing, but ensure that production code is always bundled and flattened for Apps Script deployment.
+- Use Jest for unit testing, as configured in package.json, and ensure all tests pass before deployment.
+- Do not use async, await, Promises, or unsupported ES features in testable code, to maintain compatibility with Google Apps Script V8 runtime.
+
+Final Review for Google Apps Script Compatibility
+
+- Ensure all TypeScript code is idiomatic, maintainable, unit-testable, and fully compatible with Google Apps Script (GAS) for use as a Google Sheets add-in.
+- Confirm that code supports static analysis, refactoring, and deployment via npm and Clasp, and is compatible with Visual Studio 2022, ESLint, and Resharper.
+- Verify that all TypeScript code strictly adheres to the project's tsconfig.json settings, including target ES version, module resolution, and strictness options.
+- Ensure that ESLint and Resharper rules do not conflict with tsconfig.json; resolve any discrepancies in type usage, variable declarations, and code style.
+- Use only TypeScript features and syntax permitted by both Google Apps Script and the current tsconfig.json configuration. Avoid features not supported by the GAS V8 runtime.
+- Validate that all type annotations, function signatures, and class structures are compatible with both the IDE and static analysis tools, and do not rely on Node.js or browser-specific types.
+- Confirm that the final TypeScript code passes all checks from ESLint, Resharper, and the TypeScript compiler as configured in tsconfig.json, with no warnings or errors.
+- Ensure the code is ready for deployment via npm and Clasp, and is fully compatible with Google Apps Script and the project's static analysis tools.
+- Confirm that all code is organized according to Google best practices: server-side code in src/, client-side code in src/ui/, and test code in appropriate test files.
+- Ensure that the build process outputs only the files required for deployment to the dist directory, as specified in .clasp.json, and that all code intended for Apps Script is in the global scope after bundling.
+- Verify that all dependencies are declared in package.json, and that no unnecessary or conflicting dependencies are present.
+- Ensure that all code is compatible with the Google Apps Script V8 runtime, and does not use unsupported language features or APIs.
+- Validate that all configuration files (tsconfig.json, package.json, eslint.config.js, .clasp.json) are consistent, minimal, and free of ambiguity or conflict.
+
+Please ensure that all TypeScript code you generate adheres strictly to the above context, features, coding requirements, and final review checklist for compatibility with Google Apps Script, Visual Studio 2022, ESLint, Resharper, npm, and Clasp.
+
+End of prompt

@@ -1,4 +1,6 @@
 import {
+    alertMessageErrorCode,
+    serverErrorCode,
     throwAlertMessageError,
     throwServerErrorWithContext,
     isValidationError,
@@ -20,7 +22,7 @@ import { defaultSourceUrlForRidersOnAzure } from "./storageConfig";
  * Exposed to Google Apps Script sidebar.
  * @returns Status message if successful.
  */
-export function importRidersFromUrl(): string {
+function importRidersFromUrl(): string {
     try {
         // Instantiate the sheet API using the concrete class
         const sheetApiInstance = new SheetApi(SpreadsheetApp.getActiveSpreadsheet());
@@ -33,7 +35,9 @@ export function importRidersFromUrl(): string {
 
         updateSheetRowsByZwiftId(sheetApiInstance, "Squad", riderStatsDisplayItems);
 
-        return `Downloaded ${riderStatsRecords.length} records from URL. Sheets were refreshed.`;
+        const successMessage = `Downloaded ${riderStatsRecords.length} records from URL. Sheets were refreshed.`;
+
+        return successMessage;
 
     } catch (importError) {
         const errorMessage = getErrorMessage(importError);
@@ -62,7 +66,7 @@ export function importRidersFromUrl(): string {
  *     run in AuthMode.FULL, but onOpen triggers may be AuthMode.LIMITED or
  *     AuthMode.NONE.)
  */
-export function onInstall(): void {
+function onInstall(): void {
     try {
         onOpen();
     } catch (installError) {
@@ -114,13 +118,18 @@ function onOpen(): void {
     }
     throw new Error("Unreachable code in onOpen");
 }
+
+
+
+
+
 /**
  * Opens a sidebar in the document containing the add-on user interface.
  * Called from SideBar.html via google.script.run
  */
-export function showSidebar(): void {
+function showSidebar(): void {
     try {
-        const sidebarHtml = HtmlService.createHtmlOutputFromFile("src/ui/Sidebar")
+        const sidebarHtml = HtmlService.createHtmlOutputFromFile("ui/Sidebar")
             .setTitle("Refresh stats")
             .setWidth(320);
         SpreadsheetApp.getUi().showSidebar(sidebarHtml);
@@ -142,29 +151,12 @@ export function showSidebar(): void {
     throw new Error("Unreachable code in showSidebar");
 }
 
-/**
- * Called from SideBar.html via google.script.run
- */
-export function showHelpDocument() {
-    try {
-        const helpHtml = HtmlService.createHtmlOutputFromFile("src/ui/Help")
-            .setWidth(760)
-            .setHeight(640);
-        SpreadsheetApp.getUi().showModalDialog(helpHtml, "Help");
-    } catch (helpError) {
-        const errorMessage = getErrorMessage(helpError);
-        logEvent({
-            message: `showHelpDocument error: ${errorMessage}`,
-            level: LogLevel.ERROR,
-            exception: toError(helpError)
-        });
-
-        throwAlertMessageError(
-            alertMessageErrorCode.userActionRequired,
-            "Unable to display the help document. Please ensure you have a spreadsheet open and try again.",
-            "showHelpDocument",
-            "showHelpDocument"
-        );
-    }
-    throw new Error("Unreachable code in showHelpDocument");
-}
+// Expose functions for Google Apps Script
+// @ts-ignore
+globalThis.importRidersFromUrl = importRidersFromUrl;
+// @ts-ignore
+globalThis.onInstall = onInstall;
+// @ts-ignore
+globalThis.showSidebar = showSidebar;
+// @ts-ignore
+globalThis.onOpen = onOpen;

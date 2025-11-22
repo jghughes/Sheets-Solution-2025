@@ -6,8 +6,8 @@
     "esModuleInterop": true,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": [ "ES2019" ],
-    "module": "commonjs",
+    "lib": [ "ES2020", "DOM" ],
+    "module": "none",
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
@@ -20,8 +20,15 @@
     "sourceMap": true,
     "strict": true,
     "target": "ES2019",
-    "types": [ "google-apps-script"]
+    "types": [ "google-apps-script", "jest" ]
   },
-  "include": [ "src/**/*" ],
-  "exclude": [ "tests", "**/*.test.ts", "**/*.spec.ts", "src/interfaces", "src/types" ]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "tests",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.d.ts"
+  ]
 }
