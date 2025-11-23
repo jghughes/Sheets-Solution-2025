@@ -7,7 +7,9 @@ import {
     ensureSheetExists,
     logApiError,
     getPropertyNames,
-    isValidZwiftId
+    isValidZwiftIdInCell,
+    toZwiftIdString
+
 } from "./SheetRowHelpers";
 import { toZwiftIdDictionary } from "./CollectionUtils";
 import { logEvent, LogLevel } from "./Logger";
@@ -24,36 +26,36 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
     sheetApi: SheetApi,
     sheetName: string,
     records: T[],
-): void {
+): string {
     sheetName = sheetName || "Dump";
-    let missingZwiftIdCount = 0;
-    let errorCount = 0;
 
     try {
         ensureSheetExists(sheetApi, sheetName, true);
 
         if (!records || records.length === 0) {
-            sheetApi.appendRow(sheetName, ["Zwift ID"]);
+            sheetApi.updateRow(sheetName, 1, ["Zwift ID"]);
+            const message = `Nothing for ${sheetName}`;
             logEvent({
-                message: `No records to write in writeSheetRowsByZwiftId`,
+                message: message,
                 level: LogLevel.INFO,
                 extraFields: { sheetName }
             });
-            return;
+            return message;
         }
 
         const propertyNames = getPropertyNames(records);
-        sheetApi.appendRow(sheetName, propertyNames);
+        sheetApi.updateRow(sheetName, 1, propertyNames);
 
         // Prepare data rows
         const dataRows: any[][] = [];
+        let missingZwiftIdCount = 0;
         for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
             const record = records[recordIndex];
             const zwiftId = record && record["zwiftId"];
-            if (!isValidZwiftId(zwiftId)) {
+            if (!isValidZwiftIdInCell(zwiftId)) {
                 missingZwiftIdCount++;
                 logEvent({
-                    message: `Missing zwiftId in record, skipping row in writeSheetRowsByZwiftId`,
+                    message: `Missing zwiftId in record [${zwiftId}], skipping row in ${sheetName}`,
                     level: LogLevel.WARN,
                     extraFields: { sheetName, recordIndex }
                 });
@@ -71,6 +73,7 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
         }
 
         // Write all data rows in bulk using updateContiguousRows
+        let errorCount = 0;
         if (dataRows.length > 0) {
             try {
                 // Header is row 1, so data starts at row 2 (1-based)
@@ -96,6 +99,8 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
                 writtenCount: dataRows.length
             }
         });
+
+        return `${dataRows.length} updates in "${sheetName}".`;
     } catch (mainError) {
         logApiError(
             `writeSheetRowsByZwiftId error`,
@@ -110,6 +115,7 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
             "updateContiguousRows",
             { sheetName }
         );
+        return ""; // Unreachable, just obeying function signature
     }
 }
 
@@ -126,97 +132,126 @@ export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
     sheetApi: SheetApi,
     sheetName: string,
     items: T[],
-    maxRowLimit: number = 1000
-): void {
-    ensureSheetExists(sheetApi, sheetName);
-
-    if (!items || items.length === 0) {
-        logEvent({
-            message: `No items to write in updateSheetRowsByZwiftId`,
-            level: LogLevel.INFO,
-            extraFields: { sheetName }
-        });
-        return;
+    maxRowLimit?: number
+): string {
+    sheetName = sheetName || "Squad";
+    if (typeof maxRowLimit !== "number") {
+        maxRowLimit = 1000;
     }
 
-    const propertyNames = getPropertyNames(items);
+    try {
+        ensureSheetExists(sheetApi, sheetName);
 
-    sheetApi.updateRow(sheetName, 1, propertyNames);
+        if (!items || items.length === 0) {
+            const message = `Nothing for ${sheetName}`;
+            logEvent({
+                message: message,
+                level: LogLevel.INFO,
+                extraFields: { sheetName }
+            });
+            return message;
+        }
 
-    const zwiftIdDictionary = toZwiftIdDictionary(items);
+        const propertyNames = getPropertyNames(items);
+        // Write header in row 10
+        sheetApi.updateRow(sheetName, 10, propertyNames);
 
-    let overwriteCount = 0;
-    let errorCount = 0;
+        const zwiftIdDictionary = toZwiftIdDictionary(items);
 
-    const allSheetRows = sheetApi.getAllRows(sheetName);
-    const rowLimit = Math.min(allSheetRows.length, maxRowLimit);
-
-    // Find contiguous blocks
-    let contiguousBlocks: { start: number, rows: any[][] }[] = [];
-    let currentBlock: { start: number, rows: any[][] } | null = null;
-
-    for (let rowIndex = 2; rowIndex <= rowLimit; rowIndex++) { // 1-based, skip header
-        const sheetRow = allSheetRows[rowIndex - 1];
-        const firstCellValue = sheetRow && sheetRow[0];
-
-        if (!isValidZwiftId(firstCellValue) || !(firstCellValue in zwiftIdDictionary)) {
-            if (currentBlock) {
-                contiguousBlocks.push(currentBlock);
-                currentBlock = null;
+        // check: Count of valid Zwift IDs in the dictionary
+        let validIdsInDictionary = 0;
+        for (const key in zwiftIdDictionary) {
+            if (isValidZwiftIdInCell(key)) {
+                validIdsInDictionary++;
             }
-            continue;
         }
 
-        const matchingRecord = zwiftIdDictionary[firstCellValue];
-        if (!matchingRecord) continue; // Guard against undefined
+        const allSheetRows = sheetApi.getAllRows(sheetName);
+        // Adjust row limit to account for header at row 10, so data starts at row 11
+        const rowLimit = Math.min(allSheetRows.length, maxRowLimit);
 
-        const updatedRow = propertyNames.map(propertyName =>
-            matchingRecord[propertyName as keyof ZwiftIdBase] !== undefined
-                ? matchingRecord[propertyName as keyof ZwiftIdBase]
-                : ""
-        );
+        const updatedRows: any[][] = [];
+        let overwriteCount = 0;
+        let errorCount = 0;
+        let totalValidIds = 0;
 
-        if (!currentBlock) {
-            currentBlock = { start: rowIndex, rows: [updatedRow] };
-        } else {
-            currentBlock.rows.push(updatedRow);
+        // Start processing from row 11 (1-based), skipping rows 1-9 and header at 10
+        for (let rowIndex = 11; rowIndex <= rowLimit; rowIndex++) {
+            const sheetRow = allSheetRows[rowIndex - 1];
+            const firstCellValue = sheetRow && sheetRow[0];
+
+            if (!isValidZwiftIdInCell(firstCellValue)) {
+                updatedRows.push(sheetRow); // keep as is
+                continue;
+            }
+
+            totalValidIds++;
+
+            let zwiftIdString = toZwiftIdString(firstCellValue);
+            let record: T | undefined = zwiftIdDictionary[zwiftIdString];
+            if (!record) {
+                record = { zwiftId: zwiftIdString } as T;
+            }
+
+            const updatedRow = propertyNames.map(propertyName =>
+                record && record[propertyName as keyof ZwiftIdBase] !== undefined
+                    ? record[propertyName as keyof ZwiftIdBase]
+                    : ""
+            );
+            updatedRows.push(updatedRow);
+            overwriteCount++;
         }
-        overwriteCount++;
-    }
-    if (currentBlock) {
-        contiguousBlocks.push(currentBlock);
-    }
 
-    // Batch update each block
-    for (const block of contiguousBlocks) {
-        if (
-            typeof block.start === "number" &&
-            Array.isArray(block.rows) &&
-            block.rows.length > 0 &&
-            Array.isArray(block.rows[0])
-        ) {
+        // Batch update all rows at once, starting at row 11
+        if (updatedRows.length > 0) {
             try {
-                sheetApi.updateContiguousRows(sheetName, block.start, block.rows);
-            } catch (updateError) {
-                errorCount += block.rows.length;
+                sheetApi.updateContiguousRows(sheetName, 11, updatedRows);
+            } catch (setValuesError) {
+                errorCount += updatedRows.length;
                 logApiError(
                     `API error during updateContiguousRows in updateSheetRowsByZwiftId`,
-                    updateError,
+                    setValuesError,
                     sheetName,
                     "updateContiguousRows"
                 );
             }
         }
-    }
 
-    logEvent({
-        message: `updateSheetRowsByZwiftId summary`,
-        level: LogLevel.INFO,
-        extraFields: {
+        logEvent({
+            message: `updateSheetRowsByZwiftId summary`,
+            level: LogLevel.INFO,
+            extraFields: {
+                sheetName,
+                overwriteCount,
+                errorCount,
+                totalValidIds
+            }
+        });
+
+        logEvent({
+            message: `Valid Zwift IDs found in dictionary`,
+            level: LogLevel.INFO,
+            extraFields: {
+                sheetName,
+                validIdsInDictionary
+            }
+        });
+
+        return `${overwriteCount} updates in "${sheetName}".`;
+    } catch (mainError) {
+        logApiError(
+            `updateSheetRowsByZwiftId error`,
+            mainError,
             sheetName,
-            overwriteCount,
-            errorCount,
-            blockCount: contiguousBlocks.length
-        }
-    });
+            "updateContiguousRows"
+        );
+        throwServerErrorWithContext(
+            serverErrorCode.unexpectedError,
+            `Failed to update data in sheet: ${getErrorMessage(mainError)}`,
+            "updateSheetRowsByZwiftId",
+            "updateContiguousRows",
+            { sheetName }
+        );
+        return ""; // Unreachable
+    }
 }

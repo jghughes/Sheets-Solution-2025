@@ -62,9 +62,27 @@ export function getPropertyNames<T extends ZwiftIdBase>(records: T[]): string[] 
     return propertyNames;
 }
 /**
- * Checks if a Zwift ID is valid: must be a string consisting of digits only.
+ * Checks if a Zwift ID is valid: must be a string consisting of digits only, or a positive integer.
  * @param zwiftId - The Zwift ID to validate.
  */
-export function isValidZwiftId(zwiftId: any): boolean {
-    return typeof zwiftId === "string" && /^[0-9]+$/.test(zwiftId);
+export function isValidZwiftIdInCell(zwiftId: any): boolean {
+    // Accepts either a string of digits or an integer (number, not float)
+    if (typeof zwiftId === "string" && /^[0-9]+$/.test(zwiftId)) {
+        return true;
+    }
+    if (typeof zwiftId === "number" && Number.isInteger(zwiftId) && zwiftId >= 0) {
+        return true;
+    }
+    return false;
+}
+
+
+/**
+* Converts a valid Zwift ID to a string. If already a string, returns as is.
+* Only call this after validating with isValidZwiftIdInCell.
+* @param zwiftId - The Zwift ID to convert.
+* @returns The Zwift ID as a string.
+*/
+export function toZwiftIdString(zwiftId: string | number): string {
+    return typeof zwiftId === "string" ? zwiftId : zwiftId.toString();
 }

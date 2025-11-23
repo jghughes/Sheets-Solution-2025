@@ -31,13 +31,13 @@ function importRidersFromUrl(): string {
 
         const riderStatsDisplayItems = RiderStatsItem.toDisplayItemArray(riderStatsRecords);
 
-        writeSheetRowsByZwiftId(sheetApiInstance, "Dump", riderStatsDisplayItems);
+        const message1 = writeSheetRowsByZwiftId(sheetApiInstance, "Dump", riderStatsDisplayItems);
 
-        updateSheetRowsByZwiftId(sheetApiInstance, "Squad", riderStatsDisplayItems);
+        const message2 = updateSheetRowsByZwiftId(sheetApiInstance, "Squad", riderStatsDisplayItems);
 
-        const successMessage = `Downloaded ${riderStatsRecords.length} records from URL. Sheets were refreshed.`;
+        const message = `${message1} Folloed by ${message2}`;
 
-        return successMessage;
+        return message;
 
     } catch (importError) {
         const errorMessage = getErrorMessage(importError);

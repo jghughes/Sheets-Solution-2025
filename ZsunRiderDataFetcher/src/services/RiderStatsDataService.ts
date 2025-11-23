@@ -1,7 +1,7 @@
-import * as ErrorUtils from "../utils/ErrorUtils";
+import { throwValidationError, getErrorMessage, toError } from "../utils/ErrorUtils";
 import { fetchTextFileFromUrl, throwIfNoConnection } from "../utils/HttpUtils";
-import { RiderStatsDto as RiderStatsDto } from "../models/RiderStatsDto";
-import { RiderStatsItem as RiderStatsItem } from "../models/RiderStatsItem";
+import { RiderStatsDto } from "../models/RiderStatsDto";
+import { RiderStatsItem } from "../models/RiderStatsItem";
 
 const invalidFileFormat = "invalid_file_format";
 const methodName = "fetchRiderStatsItemsFromUrl";
@@ -20,12 +20,12 @@ export function fetchRiderStatsItemsFromUrl(
             throw new Error("JSON is not an array.");
         }
     } catch (err) {
-        ErrorUtils.throwValidationError(
+        throwValidationError(
             invalidFileFormat,
-            `File content is not a valid JSON array. ${ErrorUtils.getErrorMessage(err)}`,
+            `File content is not a valid JSON array. ${getErrorMessage(err)}`,
             methodName,
             url,
-            { exception: ErrorUtils.toError(err) }
+            { exception: toError(err) }
         );
         return []; // Ensure function does not continue
     }
@@ -34,12 +34,12 @@ export function fetchRiderStatsItemsFromUrl(
     try {
         dtoArray = RiderStatsDto.fromJsonArray(jsonArray);
     } catch (err) {
-        ErrorUtils.throwValidationError(
+        throwValidationError(
             invalidFileFormat,
-            `Failed to convert JSON array to RiderStatsDto array. ${ErrorUtils.getErrorMessage(err)}`,
+            `Failed to convert JSON array to RiderStatsDto array. ${getErrorMessage(err)}`,
             methodName,
             url,
-            { exception: ErrorUtils.toError(err) }
+            { exception: toError(err) }
         );
         return []; // Ensure function does not continue
     }
@@ -48,12 +48,12 @@ export function fetchRiderStatsItemsFromUrl(
     try {
         answer = RiderStatsItem.fromDtoArray(dtoArray);
     } catch (err) {
-        ErrorUtils.throwValidationError(
+        throwValidationError(
            invalidFileFormat,
-            `Failed to map RiderStatsDto array to RiderStatsItem array. ${ErrorUtils.getErrorMessage(err)}`,
+            `Failed to map RiderStatsDto array to RiderStatsItem array. ${getErrorMessage(err)}`,
             methodName,
             url,
-            { exception: ErrorUtils.toError(err) }
+            { exception: toError(err) }
         );
         return []; // Ensure function does not continue
     }
