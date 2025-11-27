@@ -1,6 +1,4 @@
-// ESLint flat config for a Google Apps Script project using TypeScript, Jest, and HTML Service.
-// This config distinguishes between server-side Apps Script code and client-side HTML UI code.
-// Folder structure follows Google best practices: server-side code in src/, client-side in src/ui/.
+// ESLint flat config for Google Apps Script (server-side) and HTML Service (client-side) using TypeScript, Jest, and import checks.
 
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
 const importPlugin = require("eslint-plugin-import");
@@ -10,11 +8,10 @@ module.exports = [
     {
         files: ["src/**/*.ts", "src/**/*.js"],
         languageOptions: {
-            ecmaVersion: 2019, // Changed from 2020 to 2019 for strict GAS compatibility
+            ecmaVersion: 2015,
             sourceType: "script",
             globals: {
-                // Comprehensive list of Apps Script globals (readonly)
-                // Reference: https://developers.google.com/apps-script/guides/services/available
+                // Apps Script globals
                 Browser: "readonly",
                 CacheService: "readonly",
                 CalendarApp: "readonly",
@@ -57,51 +54,22 @@ module.exports = [
         rules: {
             'no-unused-vars': "warn",
             'no-undef': "error",
-            'no-console': "off",
-            'eqeqeq': "error",
-            'curly': "error",
             'semi': ["error", "always"],
             'quotes': ["error", "single"],
-            'no-var': "error",
-            'prefer-const': "error",
             'no-fallthrough': "error",
-            '@typescript-eslint/no-unused-vars': ["warn"],
-            '@typescript-eslint/no-explicit-any': "warn",
-            '@typescript-eslint/explicit-function-return-type': "off",
-            '@typescript-eslint/no-inferrable-types': "off",
-            // Prohibit unsupported features in Apps Script
+            // Import checks (warn about unresolved/missing imports)
+            'import/no-unresolved': "error",
+            'import/named': "error",
+            // Prohibit ES2016+ features (not in ES2015)
             'no-restricted-syntax': [
                 "error",
-                // Async/await and Promises
-                { "selector": "AwaitExpression", "message": "Do not use async/await in Apps Script code." },
-                { "selector": "FunctionDeclaration[async=true]", "message": "Do not use async functions in Apps Script code." },
-                { "selector": "FunctionExpression[async=true]", "message": "Do not use async functions in Apps Script code." },
-                { "selector": "ArrowFunctionExpression[async=true]", "message": "Do not use async functions in Apps Script code." },
-                { "selector": "NewExpression[callee.name='Promise']", "message": "Do not use Promise in Apps Script code." },
-                // Generators
-                { "selector": "FunctionDeclaration[generator=true]", "message": "Do not use generator functions in Apps Script code." },
-                { "selector": "FunctionExpression[generator=true]", "message": "Do not use generator functions in Apps Script code." },
-                { "selector": "YieldExpression", "message": "Do not use yield in Apps Script code." },
-                // Decorators
-                { "selector": "Decorator", "message": "Do not use decorators in Apps Script code." },
-                // Nullish coalescing and optional chaining
-                { "selector": "LogicalExpression[operator='??']", "message": "Do not use nullish coalescing (??) in Apps Script code." },
-                { "selector": "ChainExpression", "message": "Do not use optional chaining (?.) in Apps Script code." },
-                { "selector": "OptionalMemberExpression", "message": "Do not use optional chaining (?.) in Apps Script code." },
-                { "selector": "OptionalCallExpression", "message": "Do not use optional chaining (?.) in Apps Script code." },
-                // Default parameter values and destructuring in parameters
-                { "selector": "AssignmentPattern", "message": "Do not use default parameter values in Apps Script code." },
-                { "selector": "ObjectPattern", "message": "Do not use parameter destructuring in Apps Script code." },
-                { "selector": "ArrayPattern", "message": "Do not use parameter destructuring in Apps Script code." }
-            ],
-            'no-restricted-globals': [
-                "error",
-                "Map", "Set", "WeakMap", "WeakSet", "Proxy", "Symbol", "Reflect", "BigInt"
-            ],
-            'no-restricted-properties': [
-                "error",
-                { "object": "Array", "property": "flatMap", "message": "Array.prototype.flatMap is not supported in Apps Script." },
-                { "object": "Object", "property": "fromEntries", "message": "Object.fromEntries is not supported in Apps Script." }
+                { "selector": "AwaitExpression", "message": "async/await is not ES2015." },
+                { "selector": "FunctionDeclaration[async=true]", "message": "async functions are not ES2015." },
+                { "selector": "FunctionExpression[async=true]", "message": "async functions are not ES2015." },
+                { "selector": "ArrowFunctionExpression[async=true]", "message": "async functions are not ES2015." },
+                { "selector": "ChainExpression", "message": "Optional chaining (?.) is not ES2015." },
+                { "selector": "LogicalExpression[operator='??']", "message": "Nullish coalescing (??) is not ES2015." },
+                { "selector": "NewExpression[callee.name='BigInt']", "message": "BigInt is not ES2015." }
             ]
         }
     },
@@ -135,7 +103,10 @@ module.exports = [
             '@typescript-eslint/no-unused-vars': ["warn"],
             '@typescript-eslint/no-explicit-any': "warn",
             '@typescript-eslint/explicit-function-return-type': "off",
-            '@typescript-eslint/no-inferrable-types': "off"
+            '@typescript-eslint/no-inferrable-types': "off",
+            // Import checks (warn about unresolved/missing imports)
+            'import/no-unresolved': "error",
+            'import/named': "error"
         }
     },
     // Test files (Jest)

@@ -61,7 +61,7 @@ export class RiderStatsItem extends ZwiftIdBase {
             return new RiderStatsDto();
         }
         // Map all properties directly
-        return new RiderStatsDto({ ...item });
+        return new RiderStatsDto(Object.assign({}, item));
     }
 
     static fromDataTransferObject(dto: RiderStatsDto | null): RiderStatsItem {
@@ -69,7 +69,7 @@ export class RiderStatsItem extends ZwiftIdBase {
             return new RiderStatsItem();
         }
         // Map all properties directly
-        return new RiderStatsItem({ ...dto });
+        return new RiderStatsItem(Object.assign({}, dto));
     }
 
     static fromDtoArray(dtos: RiderStatsDto[]): RiderStatsItem[] {

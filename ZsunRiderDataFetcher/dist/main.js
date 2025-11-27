@@ -106,53 +106,6 @@
     return error instanceof Error ? error : void 0;
   }
 
-  // src/utils/Logger.ts
-  function logEvent(options) {
-    const {
-      message,
-      level,
-      exception,
-      extraFields
-    } = options;
-    const logEntry = {
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      level,
-      message
-    };
-    if (exception) {
-      if (typeof exception.toJson === "function") {
-        const errorJson = exception.toJson();
-        Object.assign(logEntry, {
-          name: errorJson.name,
-          code: errorJson.code,
-          errorMessage: errorJson.message,
-          stack: errorJson.stack
-        });
-        if (errorJson.context && typeof errorJson.context === "object") {
-          Object.assign(logEntry, errorJson.context);
-        }
-      } else {
-        logEntry["exception"] = {
-          name: exception.name || "Error",
-          message: exception.message || String(exception),
-          stack: exception.stack || null
-        };
-      }
-    }
-    if (extraFields && typeof extraFields === "object") {
-      Object.assign(logEntry, extraFields);
-    }
-    logJson(logEntry);
-  }
-  function logJson(entry) {
-    const json = JSON.stringify(entry);
-    if (typeof Logger !== "undefined" && typeof Logger.log === "function") {
-      Logger.log(json);
-    } else {
-      console.log(json);
-    }
-  }
-
   // src/utils/HttpUtils.ts
   function throwIfNoConnection() {
     const opName = "InternetCheck";
@@ -182,7 +135,7 @@
       const msg = getErrorMessage(err);
       logEvent({
         message: "Internet connectivity check failed",
-        level: "ERROR" /* ERROR */,
+        level: LogLevel.ERROR,
         exception: toError(err),
         extraFields: { opName }
       });
@@ -202,7 +155,6 @@
           url,
           { muteHttpExceptions: true, timeout: timeoutMs }
         );
-        if (typeof resp === "string") return resp;
         const code = resp && typeof resp.getResponseCode === "function" ? resp.getResponseCode() : void 0;
         const text = typeof resp.getContentText === "function" ? resp.getContentText() : "";
         if (typeof code === "number") {
@@ -246,7 +198,7 @@
         const isTimeout = msg.toLowerCase().includes("timeout");
         logEvent({
           message: `Attempt ${attempt} failed in fetchTextFileFromUrl${isTimeout ? " (timeout)" : ""}`,
-          level: "ERROR" /* ERROR */,
+          level: LogLevel.ERROR,
           exception: toError(err),
           extraFields: { url, opName, attempt }
         });
@@ -385,14 +337,13 @@
     // Deserialize from JSON with alias support
     static fromJson(json) {
       const item = new _RiderStatsDto();
-      for (const [jsonKey, value] of Object.entries(json)) {
+      const keys = Object.keys(json);
+      for (let i = 0; i < keys.length; i++) {
+        const jsonKey = keys[i];
+        const value = json[jsonKey];
         const prop = aliasMap[jsonKey];
         if (prop) {
-          if (prop === "zwiftId" && typeof value === "number") {
-            item[prop] = String(value);
-          } else {
-            item[prop] = value;
-          }
+          item[prop] = value;
         }
       }
       return item;
@@ -400,7 +351,10 @@
     // Serialize to JSON using preferred aliases (second field in AliasChoices)
     toJson() {
       const result = {};
-      for (const [jsonKey, prop] of Object.entries(aliasMap)) {
+      const keys = Object.keys(aliasMap);
+      for (let i = 0; i < keys.length; i++) {
+        const jsonKey = keys[i];
+        const prop = aliasMap[jsonKey];
         if (jsonKey === prop) {
           result[jsonKey] = this[prop];
         }
@@ -413,9 +367,9 @@
       return jsonArray.map((obj) => _RiderStatsDto.fromJson(obj));
     }
     // Serialize an array of RiderStatsDto to an array of JSON objects
-    static toJsonArray(dtos) {
-      if (!Array.isArray(dtos)) return [];
-      return dtos.map((dto) => dto.toJson());
+    static toJsonArray(arrayOfDto) {
+      if (!Array.isArray(arrayOfDto)) return [];
+      return arrayOfDto.map((dto) => dto.toJson());
     }
   };
 
@@ -533,13 +487,13 @@
       if (!item) {
         return new RiderStatsDto();
       }
-      return new RiderStatsDto({ ...item });
+      return new RiderStatsDto(Object.assign({}, item));
     }
     static fromDataTransferObject(dto) {
       if (!dto) {
         return new _RiderStatsItem();
       }
-      return new _RiderStatsItem({ ...dto });
+      return new _RiderStatsItem(Object.assign({}, dto));
     }
     static fromDtoArray(dtos) {
       if (!Array.isArray(dtos)) return [];
@@ -630,47 +584,340 @@
       if (!Array.isArray(jsonArray)) {
         throw new Error("JSON is not an array.");
       }
-    } catch (err) {
+    } catch (err1) {
       throwValidationError(
         invalidFileFormat,
-        `File content is not a valid JSON array. ${getErrorMessage(err)}`,
+        `File content is not a valid JSON array. ${getErrorMessage(err1)}`,
         methodName,
         url,
-        { exception: toError(err) }
+        { exception: toError(err1) }
       );
       return [];
     }
     let dtoArray;
     try {
       dtoArray = RiderStatsDto.fromJsonArray(jsonArray);
-    } catch (err) {
+    } catch (err2) {
       throwValidationError(
         invalidFileFormat,
-        `Failed to convert JSON array to RiderStatsDto array. ${getErrorMessage(err)}`,
+        `Failed to convert JSON array to RiderStatsDto array. ${getErrorMessage(err2)}`,
         methodName,
         url,
-        { exception: toError(err) }
+        { exception: toError(err2) }
       );
       return [];
     }
     let answer;
     try {
       answer = RiderStatsItem.fromDtoArray(dtoArray);
-    } catch (err) {
+    } catch (err3) {
       throwValidationError(
         invalidFileFormat,
-        `Failed to map RiderStatsDto array to RiderStatsItem array. ${getErrorMessage(err)}`,
+        `Failed to map RiderStatsDto array to RiderStatsItem array. ${getErrorMessage(err3)}`,
         methodName,
         url,
-        { exception: toError(err) }
+        { exception: toError(err3) }
       );
       return [];
     }
     return answer;
   }
 
-  // src/utils/SheetApi.ts
-  var SheetApi = class {
+  // src/utils/LoggerUtils.ts
+  function logEvent2(options) {
+    const {
+      message,
+      level,
+      exception,
+      extraFields
+    } = options;
+    const logEntry = {
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      level,
+      message
+    };
+    if (exception) {
+      if (typeof exception.toJson === "function") {
+        const errorJson = exception.toJson();
+        Object.assign(logEntry, {
+          name: errorJson.name,
+          code: errorJson.code,
+          errorMessage: errorJson.message,
+          stack: errorJson.stack
+        });
+        if (errorJson.context && typeof errorJson.context === "object") {
+          Object.assign(logEntry, errorJson.context);
+        }
+      } else {
+        logEntry["exception"] = {
+          name: exception.name || "Error",
+          message: exception.message || String(exception),
+          stack: exception.stack || null
+        };
+      }
+    }
+    if (extraFields && typeof extraFields === "object") {
+      Object.assign(logEntry, extraFields);
+    }
+    logJson(logEntry);
+  }
+  function logJson(entry) {
+    const json = JSON.stringify(entry);
+    if (typeof Logger !== "undefined" && typeof Logger.log === "function") {
+      Logger.log(json);
+    } else {
+      console.log(json);
+    }
+  }
+
+  // src/utils/SheetUtils.ts
+  function ensureSheetExists(sheetServiceInstance, sheetName, clearIfExists = false) {
+    if (!sheetServiceInstance.sheetExists(sheetName)) {
+      sheetServiceInstance.insertSheet(sheetName);
+    } else if (clearIfExists) {
+      sheetServiceInstance.clearSheet(sheetName);
+    }
+  }
+  function logSpreadsheetServiceError(message, error, sheetName, operation) {
+    const errorType = typeof error === "object" && error !== null && "code" in error ? error.code : typeof error === "object" && error !== null && "name" in error ? error.name : void 0;
+    logEvent2({
+      message,
+      level: "ERROR" /* ERROR */,
+      exception: toError(error),
+      extraFields: {
+        sheetName,
+        operation,
+        errorType,
+        errorMessage: getErrorMessage(error)
+      }
+    });
+  }
+  function isValidZwiftIdInCell(zwiftId) {
+    if (typeof zwiftId === "string" && /^[0-9]+$/.test(zwiftId)) {
+      return true;
+    }
+    if (typeof zwiftId === "number" && Number.isInteger(zwiftId) && zwiftId >= 0) {
+      return true;
+    }
+    return false;
+  }
+  function toZwiftIdString(zwiftId) {
+    return typeof zwiftId === "string" ? zwiftId : zwiftId.toString();
+  }
+
+  // src/utils/ReflectionUtils.ts
+  function getPropertyNames(records) {
+    if (!records || records.length === 0 || typeof records[0] !== "object" || records[0] === null) return [];
+    const propertyNames = Object.keys(records[0]);
+    const zwiftIdIndex = propertyNames.indexOf("zwiftId");
+    if (zwiftIdIndex > 0) {
+      propertyNames.splice(zwiftIdIndex, 1);
+      propertyNames.unshift("zwiftId");
+    }
+    return propertyNames;
+  }
+
+  // src/utils/CollectionUtils.ts
+  function toZwiftIdDictionary(items) {
+    const dict = {};
+    if (!Array.isArray(items)) return dict;
+    for (const item of items) {
+      if (item && typeof item.zwiftId === "string" && item.zwiftId.length > 0) {
+        dict[item.zwiftId] = item;
+      }
+    }
+    return dict;
+  }
+
+  // src/services/SheetRowManager.ts
+  function writeSheetRowsByZwiftId(sheetServiceInstance, sheetName, records) {
+    sheetName = sheetName || "Dump";
+    try {
+      ensureSheetExists(sheetServiceInstance, sheetName, true);
+      if (!records || records.length === 0) {
+        sheetServiceInstance.updateRow(sheetName, 1, ["Zwift ID"]);
+        const message = `Nothing for ${sheetName}`;
+        logEvent2({
+          message,
+          level: "INFO" /* INFO */,
+          extraFields: { sheetName }
+        });
+        return message;
+      }
+      const propertyNames = getPropertyNames(records);
+      sheetServiceInstance.updateRow(sheetName, 1, propertyNames);
+      const dataRows = [];
+      let missingZwiftIdCount = 0;
+      for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
+        const record = records[recordIndex];
+        const zwiftId = record && record["zwiftId"];
+        if (!isValidZwiftIdInCell(zwiftId)) {
+          missingZwiftIdCount++;
+          logEvent2({
+            message: `Missing zwiftId in record [${zwiftId}], skipping row in ${sheetName}`,
+            level: "WARN" /* WARN */,
+            extraFields: { sheetName, recordIndex }
+          });
+          continue;
+        }
+        const rowValues = propertyNames.map((propertyName) => {
+          const value = record && record[propertyName] !== void 0 ? record[propertyName] : "";
+          return value == null ? "" : String(value);
+        });
+        dataRows.push(rowValues);
+      }
+      let errorCount = 0;
+      if (dataRows.length > 0) {
+        try {
+          sheetServiceInstance.updateContiguousRows(sheetName, 2, dataRows);
+        } catch (setValuesError) {
+          errorCount += dataRows.length;
+          logSpreadsheetServiceError(
+            `API error during updateContiguousRows in writeSheetRowsByZwiftId`,
+            setValuesError,
+            sheetName,
+            "updateContiguousRows"
+          );
+        }
+      }
+      logEvent2({
+        message: `writeSheetRowsByZwiftId summary`,
+        level: "INFO" /* INFO */,
+        extraFields: {
+          sheetName,
+          missingZwiftIdCount,
+          errorCount,
+          writtenCount: dataRows.length
+        }
+      });
+      return `${dataRows.length} updates in "${sheetName}"`;
+    } catch (mainError) {
+      logSpreadsheetServiceError(
+        `writeSheetRowsByZwiftId error`,
+        mainError,
+        sheetName,
+        "updateContiguousRows"
+      );
+      throwServerErrorWithContext(
+        serverErrorCode.unexpectedError,
+        `Failed to write data to sheet: ${getErrorMessage(mainError)}`,
+        "writeSheetRowsByZwiftId",
+        "updateContiguousRows",
+        { sheetName }
+      );
+      return "";
+    }
+  }
+  function updateSheetRowsByZwiftId(sheetServiceInstance, sheetName, items, maxRowLimit) {
+    sheetName = sheetName || "Squad";
+    if (typeof maxRowLimit !== "number") {
+      maxRowLimit = 1e3;
+    }
+    try {
+      ensureSheetExists(sheetServiceInstance, sheetName);
+      if (!items || items.length === 0) {
+        const message = `Nothing for ${sheetName}`;
+        logEvent2({
+          message,
+          level: "INFO" /* INFO */,
+          extraFields: { sheetName }
+        });
+        return message;
+      }
+      const propertyNames = getPropertyNames(items);
+      sheetServiceInstance.updateRow(sheetName, 10, propertyNames);
+      const zwiftIdDictionary = toZwiftIdDictionary(items);
+      let validIdsInDictionary = 0;
+      const keys = Object.keys(zwiftIdDictionary);
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        if (isValidZwiftIdInCell(key)) {
+          validIdsInDictionary++;
+        }
+      }
+      const allSheetRows = sheetServiceInstance.getAllRows(sheetName);
+      const rowLimit = Math.min(allSheetRows.length, maxRowLimit);
+      const updatedRows = [];
+      let overwriteCount = 0;
+      let errorCount = 0;
+      let totalValidIds = 0;
+      for (let rowIndex = 11; rowIndex <= rowLimit; rowIndex++) {
+        const sheetRow = allSheetRows[rowIndex - 1];
+        const firstCellValue = sheetRow && sheetRow[0];
+        if (!isValidZwiftIdInCell(firstCellValue)) {
+          updatedRows.push(sheetRow);
+          continue;
+        }
+        totalValidIds++;
+        let zwiftIdString = toZwiftIdString(firstCellValue);
+        let record = zwiftIdDictionary[zwiftIdString];
+        if (!record) {
+          record = { zwiftId: zwiftIdString };
+        }
+        const updatedRow = propertyNames.map(
+          (propertyName) => record && record[propertyName] !== void 0 ? record[propertyName] : ""
+        );
+        updatedRows.push(updatedRow);
+        overwriteCount++;
+      }
+      if (updatedRows.length > 0) {
+        try {
+          sheetServiceInstance.updateContiguousRows(sheetName, 11, updatedRows);
+        } catch (setValuesError) {
+          errorCount += updatedRows.length;
+          logSpreadsheetServiceError(
+            `API error during updateContiguousRows in updateSheetRowsByZwiftId`,
+            setValuesError,
+            sheetName,
+            "updateContiguousRows"
+          );
+        }
+      }
+      logEvent2({
+        message: `updateSheetRowsByZwiftId summary`,
+        level: "INFO" /* INFO */,
+        extraFields: {
+          sheetName,
+          overwriteCount,
+          errorCount,
+          totalValidIds
+        }
+      });
+      logEvent2({
+        message: `Valid Zwift IDs found in dictionary`,
+        level: "INFO" /* INFO */,
+        extraFields: {
+          sheetName,
+          validIdsInDictionary
+        }
+      });
+      return `${overwriteCount} updates in "${sheetName}"`;
+    } catch (mainError) {
+      logSpreadsheetServiceError(
+        `updateSheetRowsByZwiftId error`,
+        mainError,
+        sheetName,
+        "updateContiguousRows"
+      );
+      throwServerErrorWithContext(
+        serverErrorCode.unexpectedError,
+        `Failed to update data in sheet: ${getErrorMessage(mainError)}`,
+        "updateSheetRowsByZwiftId",
+        "updateContiguousRows",
+        { sheetName }
+      );
+      return "";
+    }
+  }
+
+  // src/storage_config.ts
+  var defaultStorageAccount = "customerzsun";
+  var defaultContainer = "preprocessed";
+  var defaultBlobName = "rider_stats_dto_as_list.json";
+  var defaultSourceUrlForRidersOnAzure = `https://${defaultStorageAccount}.blob.core.windows.net/${defaultContainer}/${defaultBlobName}`;
+
+  // src/services/SpreadsheetService.ts
+  var SpreadsheetService = class {
     constructor(spreadsheet) {
       this.spreadsheet = spreadsheet;
     }
@@ -825,264 +1072,19 @@
     }
   };
 
-  // src/utils/SheetRowHelpers.ts
-  function ensureSheetExists(sheetApi, sheetName, clearIfExists = false) {
-    if (!sheetApi.sheetExists(sheetName)) {
-      sheetApi.insertSheet(sheetName);
-    } else if (clearIfExists) {
-      sheetApi.clearSheet(sheetName);
-    }
-  }
-  function logApiError(message, error, sheetName, operation) {
-    const errorType = typeof error === "object" && error !== null && "code" in error ? error.code : typeof error === "object" && error !== null && "name" in error ? error.name : void 0;
-    logEvent({
-      message,
-      level: "ERROR" /* ERROR */,
-      exception: toError(error),
-      extraFields: {
-        sheetName,
-        operation,
-        errorType,
-        errorMessage: getErrorMessage(error)
-      }
-    });
-  }
-  function getPropertyNames(records) {
-    if (!records || records.length === 0 || typeof records[0] !== "object" || records[0] === null) return [];
-    const propertyNames = Object.keys(records[0]);
-    const zwiftIdIndex = propertyNames.indexOf("zwiftId");
-    if (zwiftIdIndex > 0) {
-      propertyNames.splice(zwiftIdIndex, 1);
-      propertyNames.unshift("zwiftId");
-    }
-    return propertyNames;
-  }
-  function isValidZwiftIdInCell(zwiftId) {
-    if (typeof zwiftId === "string" && /^[0-9]+$/.test(zwiftId)) {
-      return true;
-    }
-    if (typeof zwiftId === "number" && Number.isInteger(zwiftId) && zwiftId >= 0) {
-      return true;
-    }
-    return false;
-  }
-  function toZwiftIdString(zwiftId) {
-    return typeof zwiftId === "string" ? zwiftId : zwiftId.toString();
-  }
-
-  // src/utils/CollectionUtils.ts
-  function toZwiftIdDictionary(items) {
-    const dict = {};
-    if (!Array.isArray(items)) return dict;
-    for (const item of items) {
-      if (item && typeof item.zwiftId === "string" && item.zwiftId.length > 0) {
-        dict[item.zwiftId] = item;
-      }
-    }
-    return dict;
-  }
-
-  // src/utils/SheetRowUtils.ts
-  function writeSheetRowsByZwiftId(sheetApi, sheetName, records) {
-    sheetName = sheetName || "Dump";
-    try {
-      ensureSheetExists(sheetApi, sheetName, true);
-      if (!records || records.length === 0) {
-        sheetApi.updateRow(sheetName, 1, ["Zwift ID"]);
-        const message = `Nothing for ${sheetName}`;
-        logEvent({
-          message,
-          level: "INFO" /* INFO */,
-          extraFields: { sheetName }
-        });
-        return message;
-      }
-      const propertyNames = getPropertyNames(records);
-      sheetApi.updateRow(sheetName, 1, propertyNames);
-      const dataRows = [];
-      let missingZwiftIdCount = 0;
-      for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
-        const record = records[recordIndex];
-        const zwiftId = record && record["zwiftId"];
-        if (!isValidZwiftIdInCell(zwiftId)) {
-          missingZwiftIdCount++;
-          logEvent({
-            message: `Missing zwiftId in record [${zwiftId}], skipping row in ${sheetName}`,
-            level: "WARN" /* WARN */,
-            extraFields: { sheetName, recordIndex }
-          });
-          continue;
-        }
-        const rowValues = propertyNames.map((propertyName) => {
-          const value = record && record[propertyName] !== void 0 ? record[propertyName] : "";
-          if (typeof value === "number") return value;
-          if (typeof value === "string") return value;
-          return value == null ? "" : String(value);
-        });
-        dataRows.push(rowValues);
-      }
-      let errorCount = 0;
-      if (dataRows.length > 0) {
-        try {
-          sheetApi.updateContiguousRows(sheetName, 2, dataRows);
-        } catch (setValuesError) {
-          errorCount += dataRows.length;
-          logApiError(
-            `API error during updateContiguousRows in writeSheetRowsByZwiftId`,
-            setValuesError,
-            sheetName,
-            "updateContiguousRows"
-          );
-        }
-      }
-      logEvent({
-        message: `writeSheetRowsByZwiftId summary`,
-        level: "INFO" /* INFO */,
-        extraFields: {
-          sheetName,
-          missingZwiftIdCount,
-          errorCount,
-          writtenCount: dataRows.length
-        }
-      });
-      return `${dataRows.length} updates in "${sheetName}".`;
-    } catch (mainError) {
-      logApiError(
-        `writeSheetRowsByZwiftId error`,
-        mainError,
-        sheetName,
-        "updateContiguousRows"
-      );
-      throwServerErrorWithContext(
-        serverErrorCode.unexpectedError,
-        `Failed to write data to sheet: ${getErrorMessage(mainError)}`,
-        "writeSheetRowsByZwiftId",
-        "updateContiguousRows",
-        { sheetName }
-      );
-      return "";
-    }
-  }
-  function updateSheetRowsByZwiftId(sheetApi, sheetName, items, maxRowLimit) {
-    sheetName = sheetName || "Squad";
-    if (typeof maxRowLimit !== "number") {
-      maxRowLimit = 1e3;
-    }
-    try {
-      ensureSheetExists(sheetApi, sheetName);
-      if (!items || items.length === 0) {
-        const message = `Nothing for ${sheetName}`;
-        logEvent({
-          message,
-          level: "INFO" /* INFO */,
-          extraFields: { sheetName }
-        });
-        return message;
-      }
-      const propertyNames = getPropertyNames(items);
-      sheetApi.updateRow(sheetName, 10, propertyNames);
-      const zwiftIdDictionary = toZwiftIdDictionary(items);
-      let validIdsInDictionary = 0;
-      for (const key in zwiftIdDictionary) {
-        if (isValidZwiftIdInCell(key)) {
-          validIdsInDictionary++;
-        }
-      }
-      const allSheetRows = sheetApi.getAllRows(sheetName);
-      const rowLimit = Math.min(allSheetRows.length, maxRowLimit);
-      const updatedRows = [];
-      let overwriteCount = 0;
-      let errorCount = 0;
-      let totalValidIds = 0;
-      for (let rowIndex = 11; rowIndex <= rowLimit; rowIndex++) {
-        const sheetRow = allSheetRows[rowIndex - 1];
-        const firstCellValue = sheetRow && sheetRow[0];
-        if (!isValidZwiftIdInCell(firstCellValue)) {
-          updatedRows.push(sheetRow);
-          continue;
-        }
-        totalValidIds++;
-        let zwiftIdString = toZwiftIdString(firstCellValue);
-        let record = zwiftIdDictionary[zwiftIdString];
-        if (!record) {
-          record = { zwiftId: zwiftIdString };
-        }
-        const updatedRow = propertyNames.map(
-          (propertyName) => record && record[propertyName] !== void 0 ? record[propertyName] : ""
-        );
-        updatedRows.push(updatedRow);
-        overwriteCount++;
-      }
-      if (updatedRows.length > 0) {
-        try {
-          sheetApi.updateContiguousRows(sheetName, 11, updatedRows);
-        } catch (setValuesError) {
-          errorCount += updatedRows.length;
-          logApiError(
-            `API error during updateContiguousRows in updateSheetRowsByZwiftId`,
-            setValuesError,
-            sheetName,
-            "updateContiguousRows"
-          );
-        }
-      }
-      logEvent({
-        message: `updateSheetRowsByZwiftId summary`,
-        level: "INFO" /* INFO */,
-        extraFields: {
-          sheetName,
-          overwriteCount,
-          errorCount,
-          totalValidIds
-        }
-      });
-      logEvent({
-        message: `Valid Zwift IDs found in dictionary`,
-        level: "INFO" /* INFO */,
-        extraFields: {
-          sheetName,
-          validIdsInDictionary
-        }
-      });
-      return `${overwriteCount} updates in "${sheetName}".`;
-    } catch (mainError) {
-      logApiError(
-        `updateSheetRowsByZwiftId error`,
-        mainError,
-        sheetName,
-        "updateContiguousRows"
-      );
-      throwServerErrorWithContext(
-        serverErrorCode.unexpectedError,
-        `Failed to update data in sheet: ${getErrorMessage(mainError)}`,
-        "updateSheetRowsByZwiftId",
-        "updateContiguousRows",
-        { sheetName }
-      );
-      return "";
-    }
-  }
-
-  // src/storageConfig.ts
-  var defaultStorageAccount = "customerzsun";
-  var defaultContainer = "preprocessed";
-  var defaultBlobName = "rider_stats_dto_as_list.json";
-  var defaultSourceUrlForRidersOnAzure = `https://${defaultStorageAccount}.blob.core.windows.net/${defaultContainer}/${defaultBlobName}`;
-
   // src/main.ts
   function importRidersFromUrl() {
     try {
-      const sheetApiInstance = new SheetApi(SpreadsheetApp.getActiveSpreadsheet());
-      const riderStatsRecords = fetchRiderStatsItemsFromUrl(defaultSourceUrlForRidersOnAzure);
-      const riderStatsDisplayItems = RiderStatsItem.toDisplayItemArray(riderStatsRecords);
-      const message1 = writeSheetRowsByZwiftId(sheetApiInstance, "Dump", riderStatsDisplayItems);
-      const message2 = updateSheetRowsByZwiftId(sheetApiInstance, "Squad", riderStatsDisplayItems);
-      const message = `${message1}
-${message2}`;
+      const sheetServiceInstance = new SpreadsheetService(SpreadsheetApp.getActiveSpreadsheet());
+      const importedRecords = fetchRiderStatsItemsFromUrl(defaultSourceUrlForRidersOnAzure);
+      const riderStatsDisplayItems = RiderStatsItem.toDisplayItemArray(importedRecords);
+      const message1 = writeSheetRowsByZwiftId(sheetServiceInstance, "Dump", riderStatsDisplayItems);
+      const message2 = updateSheetRowsByZwiftId(sheetServiceInstance, "Squad", riderStatsDisplayItems);
+      const message = `${message1} and ${message2}.`;
       return message;
     } catch (importError) {
       const errorMessage = getErrorMessage(importError);
-      logEvent({
+      logEvent2({
         message: `importRidersFromUrl error: ${errorMessage}`,
         level: "ERROR" /* ERROR */,
         exception: toError(importError)
@@ -1101,7 +1103,7 @@ ${message2}`;
       onOpen();
     } catch (installError) {
       const errorMessage = getErrorMessage(installError);
-      logEvent({
+      logEvent2({
         message: `onInstall error: ${errorMessage}`,
         level: "ERROR" /* ERROR */,
         exception: toError(installError)
@@ -1123,7 +1125,7 @@ ${message2}`;
       spreadsheetUi.createMenu("Rider Stats").addItem("Open Sidebar", "showSidebar").addToUi();
     } catch (openError) {
       const errorMessage = getErrorMessage(openError);
-      logEvent({
+      logEvent2({
         message: `onOpen error: ${errorMessage}`,
         level: "ERROR" /* ERROR */,
         exception: toError(openError)
@@ -1143,7 +1145,7 @@ ${message2}`;
       SpreadsheetApp.getUi().showSidebar(sidebarHtml);
     } catch (sidebarError) {
       const errorMessage = getErrorMessage(sidebarError);
-      logEvent({
+      logEvent2({
         message: `showSidebar error: ${errorMessage}`,
         level: "ERROR" /* ERROR */,
         exception: toError(sidebarError)

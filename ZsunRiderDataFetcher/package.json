@@ -4,11 +4,14 @@
   "description": "",
   "scripts": {
     "clean": "tsc --build --clean",
-    "esbuild": "esbuild src/main.ts --bundle --outfile=dist/main.js --format=iife --target=es2019 --platform=browser",
+    "clean:js": "node -e \"require('fs').readdirSync('./src').filter(f=>f.endsWith('.js')).forEach(f=>require('fs').unlinkSync('./src/'+f))\"",
+    "esbuild": "esbuild src/main.ts --bundle --outfile=dist/main.js --format=iife --target=es2015 --platform=browser",
     "copy-gs": "cpx \"src/sheet_button_entry_point.gs\" dist",
-    "build": "npm run clean && npm run esbuild && npm run copy-gs && npm run copy-html && npm run copy-manifest",
     "copy-html": "cpx \"src/**/*.html\" dist",
     "copy-manifest": "cpx \"appsscript.json\" dist",
+    "prebuild": "npm run clean && npm run clean:js",
+    "postbuild": "npm run clean:js",
+    "build": "npm run esbuild && npm run copy-gs && npm run copy-html && npm run copy-manifest",
     "push": "npx clasp push",
     "deploy": "npm run build && npm run push",
     "test": "jest",
@@ -26,6 +29,6 @@
     "eslint-plugin-import": "^2.0.0",
     "jest": "^30.0.0",
     "ts-jest": "^29.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.9.3"
   }
 }

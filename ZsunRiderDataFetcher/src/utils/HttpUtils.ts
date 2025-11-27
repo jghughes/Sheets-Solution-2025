@@ -7,7 +7,6 @@ import {
     getErrorMessage,
     toError
 } from "./ErrorUtils";
-import { logEvent, LogLevel } from "./Logger";
 
 /**
  * Checks for internet connectivity by attempting to fetch a known URL.
@@ -80,8 +79,6 @@ export function fetchTextFileFromUrl(
                 url,
                 { muteHttpExceptions: true, timeout: timeoutMs } as GoogleAppsScript.URL_Fetch.URLFetchRequestOptions & { timeout?: number }
             );
-
-            if (typeof resp === "string") return resp;
 
             const code = resp && typeof resp.getResponseCode === "function" ? resp.getResponseCode() : undefined;
             const text = typeof resp.getContentText === "function" ? resp.getContentText() : "";

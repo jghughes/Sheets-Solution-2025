@@ -1,39 +1,29 @@
-import {
-    serverErrorCode,
-    throwServerErrorWithContext,
-    getErrorMessage,
-} from "./ErrorUtils";
-import {
-    ensureSheetExists,
-    logApiError,
-    getPropertyNames,
-    isValidZwiftIdInCell,
-    toZwiftIdString
-
-} from "./SheetRowHelpers";
-import { toZwiftIdDictionary } from "./CollectionUtils";
-import { logEvent, LogLevel } from "./Logger";
-import { SheetApi } from "./SheetApi";
+import { SpreadsheetService} from "./SpreadsheetService";
 import { ZwiftIdBase } from "../models/ZwiftIdBase";
+import { ensureSheetExists, logSpreadsheetServiceError, isValidZwiftIdInCell, toZwiftIdString } from "../utils/SheetUtils";
+import { getPropertyNames } from "../utils/ReflectionUtils";
+import { toZwiftIdDictionary } from "../utils/CollectionUtils";
+import { logEvent, LogLevel } from "../utils/LoggerUtils";
+import { throwServerErrorWithContext, serverErrorCode, getErrorMessage } from "../utils/ErrorUtils";
 
 /**
  * Writes an array of items implementing ZwiftIdBase to a specified sheet.
- * @param sheetApi - Instance for sheet operations.
+ * @param sheetServiceInstance - Instance for sheet operations.
  * @param sheetName - Name of the sheet to write to.
  * @param records - Array of items implementing ZwiftIdBase.
  */
 export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
-    sheetApi: SheetApi,
+    sheetServiceInstance: SpreadsheetService,
     sheetName: string,
     records: T[],
 ): string {
     sheetName = sheetName || "Dump";
 
     try {
-        ensureSheetExists(sheetApi, sheetName, true);
+        ensureSheetExists(sheetServiceInstance, sheetName, true);
 
         if (!records || records.length === 0) {
-            sheetApi.updateRow(sheetName, 1, ["Zwift ID"]);
+            sheetServiceInstance.updateRow(sheetName, 1, ["Zwift ID"]);
             const message = `Nothing for ${sheetName}`;
             logEvent({
                 message: message,
@@ -44,7 +34,7 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
         }
 
         const propertyNames = getPropertyNames(records);
-        sheetApi.updateRow(sheetName, 1, propertyNames);
+        sheetServiceInstance.updateRow(sheetName, 1, propertyNames);
 
         // Prepare data rows
         const dataRows: any[][] = [];
@@ -65,8 +55,6 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
                 const value = (record && record[propertyName as keyof ZwiftIdBase] !== undefined)
                     ? record[propertyName as keyof ZwiftIdBase]
                     : "";
-                if (typeof value === "number") return value;
-                if (typeof value === "string") return value;
                 return value == null ? "" : String(value);
             });
             dataRows.push(rowValues);
@@ -77,10 +65,10 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
         if (dataRows.length > 0) {
             try {
                 // Header is row 1, so data starts at row 2 (1-based)
-                sheetApi.updateContiguousRows(sheetName, 2, dataRows);
+                sheetServiceInstance.updateContiguousRows(sheetName, 2, dataRows);
             } catch (setValuesError) {
                 errorCount += dataRows.length;
-                logApiError(
+                logSpreadsheetServiceError(
                     `API error during updateContiguousRows in writeSheetRowsByZwiftId`,
                     setValuesError,
                     sheetName,
@@ -100,9 +88,9 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
             }
         });
 
-        return `${dataRows.length} updates in "${sheetName}".`;
+        return `${dataRows.length} updates in "${sheetName}"`;
     } catch (mainError) {
-        logApiError(
+        logSpreadsheetServiceError(
             `writeSheetRowsByZwiftId error`,
             mainError,
             sheetName,
@@ -123,13 +111,13 @@ export function writeSheetRowsByZwiftId<T extends ZwiftIdBase>(
  * Updates the specified sheet with items implementing ZwiftIdBase.
  * Overwrites rows where the first cell matches a zwiftId in the items.
  * Uses batch update for efficiency.
- * @param sheetApi - Instance for sheet operations.
+ * @param sheetServiceInstance - Instance for sheet operations.
  * @param sheetName - Name of the sheet to update.
  * @param items - Array of items implementing ZwiftIdBase.
  * @param maxRowLimit - Maximum number of rows to process.
  */
 export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
-    sheetApi: SheetApi,
+    sheetServiceInstance: SpreadsheetService,
     sheetName: string,
     items: T[],
     maxRowLimit?: number
@@ -140,7 +128,7 @@ export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
     }
 
     try {
-        ensureSheetExists(sheetApi, sheetName);
+        ensureSheetExists(sheetServiceInstance, sheetName);
 
         if (!items || items.length === 0) {
             const message = `Nothing for ${sheetName}`;
@@ -154,19 +142,21 @@ export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
 
         const propertyNames = getPropertyNames(items);
         // Write header in row 10
-        sheetApi.updateRow(sheetName, 10, propertyNames);
+        sheetServiceInstance.updateRow(sheetName, 10, propertyNames);
 
         const zwiftIdDictionary = toZwiftIdDictionary(items);
 
-        // check: Count of valid Zwift IDs in the dictionary
+        // check: Count of valid Zwift IDs in the dictionary merely for reporting purposes
         let validIdsInDictionary = 0;
-        for (const key in zwiftIdDictionary) {
+        const keys = Object.keys(zwiftIdDictionary);
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
             if (isValidZwiftIdInCell(key)) {
                 validIdsInDictionary++;
             }
         }
 
-        const allSheetRows = sheetApi.getAllRows(sheetName);
+        const allSheetRows = sheetServiceInstance.getAllRows(sheetName);
         // Adjust row limit to account for header at row 10, so data starts at row 11
         const rowLimit = Math.min(allSheetRows.length, maxRowLimit);
 
@@ -205,10 +195,10 @@ export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
         // Batch update all rows at once, starting at row 11
         if (updatedRows.length > 0) {
             try {
-                sheetApi.updateContiguousRows(sheetName, 11, updatedRows);
+                sheetServiceInstance.updateContiguousRows(sheetName, 11, updatedRows);
             } catch (setValuesError) {
                 errorCount += updatedRows.length;
-                logApiError(
+                logSpreadsheetServiceError(
                     `API error during updateContiguousRows in updateSheetRowsByZwiftId`,
                     setValuesError,
                     sheetName,
@@ -237,9 +227,9 @@ export function updateSheetRowsByZwiftId<T extends ZwiftIdBase>(
             }
         });
 
-        return `${overwriteCount} updates in "${sheetName}".`;
+        return `${overwriteCount} updates in "${sheetName}"`;
     } catch (mainError) {
-        logApiError(
+        logSpreadsheetServiceError(
             `updateSheetRowsByZwiftId error`,
             mainError,
             sheetName,

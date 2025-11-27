@@ -6,8 +6,9 @@
     "esModuleInterop": true,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": [ "ES2020", "DOM" ],
+    "lib": [ "ES2015" ],
     "module": "none",
+    "noEmit": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitAny": true,
     "noImplicitReturns": true,
@@ -19,7 +20,7 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "ES2019",
+    "target": "ES2015",
     "types": [ "google-apps-script", "jest" ]
   },
   "include": [

@@ -3,7 +3,6 @@
     <TypeScriptConfiguration Remove="tsconfig.json" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="dist\" />
     <Folder Include="tests\ui\" />
     <Folder Include="tests\utils\http-utils\" />
   </ItemGroup>

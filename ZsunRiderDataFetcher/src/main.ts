@@ -8,11 +8,11 @@ import {
     toError
 } from "./utils/ErrorUtils";
 import { fetchRiderStatsItemsFromUrl } from "./services/RiderStatsDataService";
+import { writeSheetRowsByZwiftId, updateSheetRowsByZwiftId } from "./services/SheetRowManager";
 import { RiderStatsItem } from "./models/RiderStatsItem";
-import { logEvent, LogLevel } from "./utils/Logger";
-import { SheetApi } from "./utils/SheetApi";
-import { writeSheetRowsByZwiftId, updateSheetRowsByZwiftId } from "./utils/SheetRowUtils";
-import { defaultSourceUrlForRidersOnAzure } from "./storageConfig";
+import { logEvent, LogLevel } from "./utils/LoggerUtils";
+import { defaultSourceUrlForRidersOnAzure } from "./storage_config";
+import { SpreadsheetService } from "./services/SpreadsheetService";
 
 /**
  * Called from SideBar.html via google.script.run
@@ -25,17 +25,17 @@ import { defaultSourceUrlForRidersOnAzure } from "./storageConfig";
 function importRidersFromUrl(): string {
     try {
         // Instantiate the sheet API using the concrete class
-        const sheetApiInstance = new SheetApi(SpreadsheetApp.getActiveSpreadsheet());
+        const sheetServiceInstance = new SpreadsheetService(SpreadsheetApp.getActiveSpreadsheet());
 
-        const riderStatsRecords = fetchRiderStatsItemsFromUrl(defaultSourceUrlForRidersOnAzure);
+        const importedRecords = fetchRiderStatsItemsFromUrl(defaultSourceUrlForRidersOnAzure);
 
-        const riderStatsDisplayItems = RiderStatsItem.toDisplayItemArray(riderStatsRecords);
+        const riderStatsDisplayItems = RiderStatsItem.toDisplayItemArray(importedRecords);
 
-        const message1 = writeSheetRowsByZwiftId(sheetApiInstance, "Dump", riderStatsDisplayItems);
+        const message1 = writeSheetRowsByZwiftId(sheetServiceInstance, "Dump", riderStatsDisplayItems);
 
-        const message2 = updateSheetRowsByZwiftId(sheetApiInstance, "Squad", riderStatsDisplayItems);
+        const message2 = updateSheetRowsByZwiftId(sheetServiceInstance, "Squad", riderStatsDisplayItems);
 
-        const message = `${message1} Folloed by ${message2}`;
+        const message = `${message1} and ${message2}.`;
 
         return message;
 

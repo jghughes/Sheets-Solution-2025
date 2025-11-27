@@ -2,20 +2,20 @@ import {
     getErrorMessage,
     toError
 } from "./ErrorUtils";
-import { logEvent, LogLevel } from "./Logger";
-import { SheetApi } from "./SheetApi";
-import { ZwiftIdBase } from "../models/ZwiftIdBase";
+import { logEvent, LogLevel } from "./LoggerUtils";
+import { SpreadsheetService } from "../services/SpreadsheetService";
+
 /**
  * Ensures the sheet exists. If not, inserts it. Optionally clears the sheet.
- * @param sheetApi - Instance for sheet operations.
+ * @param sheetServiceInstance - Instance for sheet operations.
  * @param sheetName - Name of the sheet.
  * @param clearIfExists - Whether to clear the sheet if it exists.
  */
-export function ensureSheetExists(sheetApi: SheetApi, sheetName: string, clearIfExists: boolean = false): void {
-    if (!sheetApi.sheetExists(sheetName)) {
-        sheetApi.insertSheet(sheetName);
+export function ensureSheetExists(sheetServiceInstance: SpreadsheetService, sheetName: string, clearIfExists: boolean = false): void {
+    if (!sheetServiceInstance.sheetExists(sheetName)) {
+        sheetServiceInstance.insertSheet(sheetName);
     } else if (clearIfExists) {
-        sheetApi.clearSheet(sheetName);
+        sheetServiceInstance.clearSheet(sheetName);
     }
 }
 
@@ -26,7 +26,7 @@ export function ensureSheetExists(sheetApi: SheetApi, sheetName: string, clearIf
  * @param sheetName - Name of the sheet.
  * @param operation - Operation name.
  */
-export function logApiError(message: string, error: any, sheetName: string, operation: string): void {
+export function logSpreadsheetServiceError(message: string, error: any, sheetName: string, operation: string): void {
     const errorType =
         typeof error === "object" && error !== null && "code" in error
             ? (error as any).code
@@ -47,20 +47,8 @@ export function logApiError(message: string, error: any, sheetName: string, oper
     });
 }
 
-/**
- * Gets property names from the first record, moving zwiftId to the front if present.
- * @param records - Array of items implementing IHasZwiftId.
- */
-export function getPropertyNames<T extends ZwiftIdBase>(records: T[]): string[] {
-    if (!records || records.length === 0 || typeof records[0] !== "object" || records[0] === null) return [];
-    const propertyNames = Object.keys(records[0]);
-    const zwiftIdIndex = propertyNames.indexOf("zwiftId");
-    if (zwiftIdIndex > 0) {
-        propertyNames.splice(zwiftIdIndex, 1);
-        propertyNames.unshift("zwiftId");
-    }
-    return propertyNames;
-}
+
+
 /**
  * Checks if a Zwift ID is valid: must be a string consisting of digits only, or a positive integer.
  * @param zwiftId - The Zwift ID to validate.

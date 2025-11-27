@@ -1,4 +1,4 @@
-export class SheetApi {
+export class SpreadsheetService {
     private readonly spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet;
 
     constructor(spreadsheet: GoogleAppsScript.Spreadsheet.Spreadsheet) {

@@ -110,15 +110,13 @@ export class RiderStatsDto extends ZwiftIdBase {
     // Deserialize from JSON with alias support
     static fromJson(json: Record<string, any>): RiderStatsDto {
         const item = new RiderStatsDto();
-        for (const [jsonKey, value] of Object.entries(json)) {
+        const keys = Object.keys(json);
+        for (let i = 0; i < keys.length; i++) {
+            const jsonKey = keys[i];
+            const value = json[jsonKey];
             const prop = aliasMap[jsonKey];
             if (prop) {
-                // Convert zwiftId to string if needed
-                if (prop === "zwiftId" && typeof value === "number") {
-                    item[prop] = String(value);
-                } else {
-                    (item as any)[prop] = value;
-                }
+                (item as any)[prop] = value;
             }
         }
         return item;
@@ -127,8 +125,10 @@ export class RiderStatsDto extends ZwiftIdBase {
     // Serialize to JSON using preferred aliases (second field in AliasChoices)
     toJson(): Record<string, any> {
         const result: Record<string, any> = {};
-        // Only use the preferred alias for each property
-        for (const [jsonKey, prop] of Object.entries(aliasMap)) {
+        const keys = Object.keys(aliasMap);
+        for (let i = 0; i < keys.length; i++) {
+            const jsonKey = keys[i];
+            const prop = aliasMap[jsonKey];
             if (jsonKey === prop) { // preferred alias
                 result[jsonKey] = this[prop];
             }
@@ -143,9 +143,9 @@ export class RiderStatsDto extends ZwiftIdBase {
     }
 
     // Serialize an array of RiderStatsDto to an array of JSON objects
-    static toJsonArray(dtos: RiderStatsDto[]): Record<string, any>[] {
-        if (!Array.isArray(dtos)) return [];
-        return dtos.map(dto => dto.toJson());
+    static toJsonArray(arrayOfDto: RiderStatsDto[]): Record<string, any>[] {
+        if (!Array.isArray(arrayOfDto)) return [];
+        return arrayOfDto.map(dto => dto.toJson());
     }
 
 }

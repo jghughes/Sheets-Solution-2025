@@ -13,19 +13,21 @@ export function fetchRiderStatsItemsFromUrl(
     throwIfNoConnection();
     const text = fetchTextFileFromUrl(url);
 
+// ReSharper disable once AssignedValueIsNeverUsed
     let jsonArray: Record<string, any>[] = [];
+
     try {
         jsonArray = JSON.parse(text);
         if (!Array.isArray(jsonArray)) {
             throw new Error("JSON is not an array.");
         }
-    } catch (err) {
+    } catch (err1) {
         throwValidationError(
             invalidFileFormat,
-            `File content is not a valid JSON array. ${getErrorMessage(err)}`,
+            `File content is not a valid JSON array. ${getErrorMessage(err1)}`,
             methodName,
             url,
-            { exception: toError(err) }
+            { exception: toError(err1) }
         );
         return []; // Ensure function does not continue
     }
@@ -33,13 +35,13 @@ export function fetchRiderStatsItemsFromUrl(
     let dtoArray: RiderStatsDto[];
     try {
         dtoArray = RiderStatsDto.fromJsonArray(jsonArray);
-    } catch (err) {
+    } catch (err2) {
         throwValidationError(
             invalidFileFormat,
-            `Failed to convert JSON array to RiderStatsDto array. ${getErrorMessage(err)}`,
+            `Failed to convert JSON array to RiderStatsDto array. ${getErrorMessage(err2)}`,
             methodName,
             url,
-            { exception: toError(err) }
+            { exception: toError(err2) }
         );
         return []; // Ensure function does not continue
     }
@@ -47,13 +49,13 @@ export function fetchRiderStatsItemsFromUrl(
     let answer: RiderStatsItem[];
     try {
         answer = RiderStatsItem.fromDtoArray(dtoArray);
-    } catch (err) {
+    } catch (err3) {
         throwValidationError(
            invalidFileFormat,
-            `Failed to map RiderStatsDto array to RiderStatsItem array. ${getErrorMessage(err)}`,
+            `Failed to map RiderStatsDto array to RiderStatsItem array. ${getErrorMessage(err3)}`,
             methodName,
             url,
-            { exception: toError(err) }
+            { exception: toError(err3) }
         );
         return []; // Ensure function does not continue
     }
